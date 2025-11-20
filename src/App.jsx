@@ -37,7 +37,9 @@ import {
   LogOut,
   LogIn,
   Sparkles,
-  Key
+  Key,
+  Eye,      // Added
+  EyeOff    // Added
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -270,6 +272,7 @@ export default function LifeSync() {
   
   // API Key Management (LocalStorage for security)
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('lifesync_openai_key') || '');
+  const [showApiKey, setShowApiKey] = useState(false); // Added state for visibility toggle
   
   // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -650,15 +653,23 @@ export default function LifeSync() {
   // --- AI Coach Functionality ---
 
   const handleAskCoach = async () => {
-    if (!apiKey) {
+    // 1. Sanitize Key
+    const cleanedKey = apiKey.trim();
+    
+    if (!cleanedKey) {
       alert("Please enter your OpenAI API Key in Profile -> Settings.");
       return;
+    }
+    
+    if (!cleanedKey.startsWith('sk-')) {
+       alert("Invalid Key Format. OpenAI keys usually start with 'sk-'. Please check your settings.");
+       return;
     }
 
     setCoachLoading(true);
     setCoachResponse(null);
 
-    // 1. Construct Prompt Context
+    // 2. Construct Prompt Context
     const recentLogs = entries.slice(0, 8).map(e => 
       `- ${e.type.toUpperCase()} (${new Date(e.timestamp).toLocaleTimeString()}): ${e.title}. ${e.note || ''}`
     ).join('\n');
@@ -689,7 +700,7 @@ export default function LifeSync() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${cleanedKey}` // Use cleaned key
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
@@ -699,12 +710,20 @@ export default function LifeSync() {
       });
 
       const data = await response.json();
-      if (data.error) throw new Error(data.error.message);
+      
+      if (data.error) {
+        // Handle specific quota errors which can sometimes look like auth errors
+        if (data.error.code === 'insufficient_quota') {
+            throw new Error("You have run out of OpenAI credits. Check your billing at platform.openai.com.");
+        }
+        throw new Error(data.error.message);
+      }
+      
       setCoachResponse(data.choices[0].message.content);
 
     } catch (error) {
       console.error("AI Error:", error);
-      setCoachResponse(`Error: ${error.message}. Check your API Key in Settings.`);
+      setCoachResponse(`Error: ${error.message}. \n\nTroubleshooting:\n1. Check for extra spaces in Settings.\n2. Ensure your OpenAI account has credit balance (not just a linked card).`);
     } finally {
       setCoachLoading(false);
     }
@@ -1167,15 +1186,24 @@ export default function LifeSync() {
             </div>
 
             <div className="pt-4 border-t border-zinc-800 mt-2">
-               <label className="text-xs text-violet-400 font-medium uppercase block mb-2 flex items-center gap-2">
-                  <Sparkles size={12} /> OpenAI API Key
-               </label>
+               <div className="flex justify-between items-center mb-2">
+                 <label className="text-xs text-violet-400 font-medium uppercase flex items-center gap-2">
+                    <Sparkles size={12} /> OpenAI API Key
+                 </label>
+                 <button 
+                   onClick={() => setShowApiKey(!showApiKey)} 
+                   className="text-zinc-500 hover:text-white text-[10px] flex items-center gap-1 transition-colors"
+                 >
+                   {showApiKey ? <EyeOff size={12} /> : <Eye size={12} />}
+                   {showApiKey ? "Hide" : "Show"}
+                 </button>
+               </div>
                <input 
-                type="password" 
+                type={showApiKey ? "text" : "password"} 
                 placeholder="sk-proj-..."
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500 placeholder:text-zinc-700"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500 placeholder:text-zinc-700 font-mono text-sm"
               />
               <p className="text-[10px] text-zinc-500 mt-1">
                 Saved locally in your browser. Never synced to server.
