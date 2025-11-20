@@ -87,7 +87,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const appId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+const appId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'lifesync-local';
 
 // --- Constants & Data ---
 
@@ -267,7 +267,13 @@ const TimelineEntry = ({ entry, onDelete }) => {
         <div className="flex justify-between items-start">
            <div className="flex-1 pr-4">
              <span className="text-xs font-mono text-zinc-500 mb-1 block">
-               {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+               {(() => { 
+                 const d = new Date(entry.timestamp);
+                 const t = d.getTime();
+                 return Number.isNaN(t) 
+                   ? '--:--' 
+                   : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); 
+               })()}
              </span>
              <h3 className="text-lg font-semibold text-zinc-200 group-hover:text-white transition-colors flex items-center gap-2">
                 {entry.title}
@@ -493,11 +499,30 @@ export default function LifeSync() {
     if (!user) return;
     const q = collection(db, 'artifacts', appId, 'users', user.uid, 'entries');
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedEntries = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      fetchedEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const fetchedEntries = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let ts = data.timestamp;
+        if (ts && typeof ts === 'object' && typeof ts.toDate === 'function') {
+          try {
+            ts = ts.toDate().toISOString();
+          } catch (_) {
+            ts = undefined;
+          }
+        }
+        return {
+          id: doc.id,
+          ...data,
+          ...(ts ? { timestamp: ts } : {})
+        };
+      });
+      fetchedEntries.sort((a, b) => {
+        const tb = new Date(b.timestamp).getTime();
+        const ta = new Date(a.timestamp).getTime();
+        if (Number.isNaN(tb) && Number.isNaN(ta)) return 0;
+        if (Number.isNaN(tb)) return 1;
+        if (Number.isNaN(ta)) return -1;
+        return tb - ta;
+      });
       setEntries(fetchedEntries);
     }, (error) => console.error("Error fetching entries:", error));
     return () => unsubscribe();
@@ -566,25 +591,30 @@ export default function LifeSync() {
 
   const fastingData = useMemo(() => {
     if (!lastMeal) return { hours: 0, minutes: 0, seconds: 0, progress: 0, label: "Start your first fast" };
-      
+    
     const lastMealDate = new Date(lastMeal.timestamp);
     const diffMs = currentTime - lastMealDate;
-    // Protect against future dates causing negative
-    const safeDiffMs = Math.max(0, diffMs); 
+    const safeMs = Number.isFinite(diffMs) && diffMs > 0 ? diffMs : 0;
 
-    const diffHrs = Math.floor(safeDiffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((safeDiffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const diffSecs = Math.floor((safeDiffMs % (1000 * 60)) / 1000);
-      
+    const diffHrs = Math.floor(safeMs / (1000 * 60 * 60));
+    const diffMins = Math.floor((safeMs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffSecs = Math.floor((safeMs % (1000 * 60)) / 1000);
+
     const goal = userSettings.fastingGoal > 0 ? userSettings.fastingGoal : 16;
-    const progress = Math.min((diffHrs / goal) * 100, 100);
+    const progress = Math.min(((Number.isFinite(diffHrs) ? diffHrs : 0) / goal) * 100, 100);
 
     let label = "Fat Burning Zone";
-    if (diffHrs < 4) label = "Digesting";
-    else if (diffHrs < 12) label = "Normal State";
-    else if (diffHrs > 18) label = "Autophagy";
+    if (Number.isFinite(diffHrs) && diffHrs < 4) label = "Digesting";
+    else if (Number.isFinite(diffHrs) && diffHrs < 12) label = "Normal State";
+    else if (Number.isFinite(diffHrs) && diffHrs > 18) label = "Autophagy";
 
-    return { hours: diffHrs, minutes: diffMins, seconds: diffSecs, progress, label };
+    return { 
+      hours: Number.isFinite(diffHrs) ? diffHrs : 0, 
+      minutes: Number.isFinite(diffMins) ? diffMins : 0, 
+      seconds: Number.isFinite(diffSecs) ? diffSecs : 0, 
+      progress, 
+      label 
+    };
   }, [lastMeal, currentTime, userSettings.fastingGoal]);
 
   const detoxData = useMemo(() => {
@@ -1112,7 +1142,13 @@ export default function LifeSync() {
           <Card className="text-center py-4">
             <div className="text-zinc-500 text-xs mb-1">Last Meal</div>
             <div className="text-zinc-200 font-medium">
-              {lastMeal ? new Date(lastMeal.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+              {(() => {
+                if (!lastMeal) return '--:--';
+                const d = new Date(lastMeal.timestamp);
+                return Number.isNaN(d.getTime()) 
+                  ? '--:--' 
+                  : d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+              })()}
             </div>
           </Card>
           
@@ -1141,7 +1177,7 @@ export default function LifeSync() {
      const todayIndex = new Date().getDay();
      const todayStr = new Date().toISOString().split('T')[0];
      
-     const todaysRoutines = routines.filter(r => r.days.includes(todayIndex));
+     const todaysRoutines = routines.filter(r => (Array.isArray(r.days) ? r.days : [0,1,2,3,4,5,6]).includes(todayIndex));
      
      todaysRoutines.sort((a, b) => {
         const aDone = (a.completedDates || []).includes(todayStr);
@@ -1184,6 +1220,9 @@ export default function LifeSync() {
                       exercise: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
                       mindset: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10'
                    };
+                   const typeKey = (routine && (routine.type === 'diet' || routine.type === 'exercise' || routine.type === 'mindset')) ? routine.type : 'mindset';
+                   const colorClasses = colors[typeKey];
+                   const iconColor = (colorClasses.split(' ')[0] || 'text-zinc-600');
                    
                    return (
                       <div 
@@ -1192,7 +1231,7 @@ export default function LifeSync() {
                         className={`relative flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer group
                            ${isCompleted ? 'bg-zinc-900/30 border-zinc-800 opacity-60' : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'}`}
                       >
-                          <div className={`${isCompleted ? 'text-zinc-600' : colors[routine.type].split(' ')[0]}`}>
+                          <div className={`${isCompleted ? 'text-zinc-600' : iconColor}`}>
                             {isCompleted ? <CheckCircle size={24} /> : <Circle size={24} />}
                           </div>
                           
@@ -1201,8 +1240,8 @@ export default function LifeSync() {
                                {routine.title}
                              </div>
                              <div className="flex gap-2 mt-1">
-                               <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${colors[routine.type]}`}>
-                                 {routine.type}
+                               <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${colorClasses}`}>
+                                 {typeKey}
                                </span>
                              </div>
                           </div>
