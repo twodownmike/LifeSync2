@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, 
   Minus, 
@@ -38,8 +38,10 @@ import {
   LogIn,
   Sparkles,
   Key,
-  Eye,      // Added
-  EyeOff    // Added
+  Eye,
+  EyeOff,
+  Send,      // Added
+  MessageSquare // Added
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -61,6 +63,9 @@ import {
   doc, 
   onSnapshot, 
   setDoc,
+  query,     // Added
+  orderBy,   // Added
+  limit      // Added
 } from 'firebase/firestore';
 
 // --- Firebase Initialization ---
@@ -253,6 +258,55 @@ const StatBar = ({ label, value, max, color }) => (
   </div>
 );
 
+// --- Custom Markdown Formatter ---
+const MarkdownText = ({ text }) => {
+  if (!text) return null;
+  const lines = text.split('\n');
+  
+  return (
+    <div className="space-y-2 text-sm leading-relaxed">
+      {lines.map((line, i) => {
+        // Header 3 (###)
+        if (line.startsWith('### ')) {
+          return <h3 key={i} className="text-lg font-bold text-violet-300 mt-4 mb-1">{line.replace('### ', '')}</h3>;
+        }
+        
+        // Header 2 (##)
+        if (line.startsWith('## ')) {
+          return <h2 key={i} className="text-xl font-bold text-white mt-5 mb-2">{line.replace('## ', '')}</h2>;
+        }
+
+        // List Items
+        if (line.trim().startsWith('- ')) {
+          const content = line.trim().substring(2);
+          return (
+            <div key={i} className="flex gap-2 pl-2">
+              <span className="text-violet-400">•</span>
+              <span className="text-zinc-300">{parseBold(content)}</span>
+            </div>
+          )
+        }
+
+        // Standard Paragraph
+        if (line.trim() === '') return <div key={i} className="h-2"></div>;
+        
+        return <div key={i} className="text-zinc-300">{parseBold(line)}</div>;
+      })}
+    </div>
+  );
+};
+
+const parseBold = (text) => {
+  const parts = text.split(/(\*\*.*?\*\*)/);
+  return parts.map((part, j) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+};
+
+
 // --- Main App Component ---
 
 export default function LifeSync() {
@@ -272,7 +326,7 @@ export default function LifeSync() {
   
   // API Key Management (LocalStorage for security)
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('lifesync_openai_key') || '');
-  const [showApiKey, setShowApiKey] = useState(false); // Added state for visibility toggle
+  const [showApiKey, setShowApiKey] = useState(false);
   
   // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -288,7 +342,9 @@ export default function LifeSync() {
   
   // AI Coach State
   const [coachLoading, setCoachLoading] = useState(false);
-  const [coachResponse, setCoachResponse] = useState(null);
+  const [coachMessages, setCoachMessages] = useState([]); // Persistent messages
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef(null);
 
   // Form States
   const [note, setNote] = useState('');
@@ -379,6 +435,25 @@ export default function LifeSync() {
         setUserSettings(prev => ({ ...prev, ...docSnap.data() }));
       }
     }, (error) => console.error("Error fetching settings:", error));
+    return () => unsubscribe();
+  }, [user]);
+
+  // --- Fetch Coach Messages ---
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'artifacts', appId, 'users', user.uid, 'coach_messages'),
+      orderBy('createdAt', 'asc')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setCoachMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      // Scroll to bottom on new message
+      setTimeout(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
+    });
     return () => unsubscribe();
   }, [user]);
 
@@ -650,84 +725,93 @@ export default function LifeSync() {
     return now.toISOString().slice(0, 16);
   };
 
-  // --- AI Coach Functionality ---
+  // --- AI Coach Logic (Chat) ---
 
-  const handleAskCoach = async () => {
-    // 1. Sanitize Key
+  const handleGeneratePlan = async () => {
+     if (!apiKey) {
+       alert("Please enter API Key in settings.");
+       return;
+     }
+     const prompt = "Generate my daily action plan based on my logs and goals.";
+     await handleSendMessage(prompt, true);
+  };
+
+  const handleSendMessage = async (textInput, isInitial = false) => {
     const cleanedKey = apiKey.trim();
-    
-    if (!cleanedKey) {
-      alert("Please enter your OpenAI API Key in Profile -> Settings.");
-      return;
-    }
-    
-    if (!cleanedKey.startsWith('sk-')) {
-       alert("Invalid Key Format. OpenAI keys usually start with 'sk-'. Please check your settings.");
+    if (!cleanedKey || !cleanedKey.startsWith('sk-')) {
+       alert("Invalid API Key. Please check settings.");
        return;
     }
+    if (!textInput.trim()) return;
 
+    setChatInput('');
     setCoachLoading(true);
-    setCoachResponse(null);
-
-    // 2. Construct Prompt Context
-    const recentLogs = entries.slice(0, 8).map(e => 
-      `- ${e.type.toUpperCase()} (${new Date(e.timestamp).toLocaleTimeString()}): ${e.title}. ${e.note || ''}`
-    ).join('\n');
-
-    const prompt = `
-      You are LifeSync AI, an elite fitness and lifestyle coach using the "Dopamine Detox" protocol.
-      
-      User Profile:
-      - Name: ${userSettings.displayName}
-      - Goal: ${userSettings.fitnessGoal || 'General Health'}
-      - Diet: ${userSettings.dietaryPreferences || 'None'}
-      - Current Time: ${currentTime.toLocaleTimeString()}
-      - Bio Phase: ${bioPhase.title} (${bioPhase.desc})
-      - Fasting State: ${fastingData.label} (${fastingData.hours}h fasted)
-      
-      Recent Activity:
-      ${recentLogs}
-
-      Based on the time of day, their goal, and their recent logs, provide a concise, punchy recommendation in Markdown format.
-      Include:
-      1. **Next Meal Idea** (Specific to their diet & fasting state)
-      2. **Workout Suggestion** (If they haven't workout out, or recovery if they have)
-      3. **Mantra** (One line motivation)
-    `;
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${cleanedKey}` // Use cleaned key
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "system", content: prompt }],
-          max_tokens: 300
-        })
-      });
+        // 1. Save User Message
+        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'coach_messages'), {
+            role: 'user',
+            content: textInput,
+            createdAt: new Date().toISOString()
+        });
 
-      const data = await response.json();
-      
-      if (data.error) {
-        // Handle specific quota errors which can sometimes look like auth errors
-        if (data.error.code === 'insufficient_quota') {
-            throw new Error("You have run out of OpenAI credits. Check your billing at platform.openai.com.");
-        }
-        throw new Error(data.error.message);
-      }
-      
-      setCoachResponse(data.choices[0].message.content);
+        // 2. Build Context
+        const recentLogs = entries.slice(0, 10).map(e => 
+            `- ${e.type.toUpperCase()} (${new Date(e.timestamp).toLocaleTimeString()}): ${e.title}. ${e.note || ''}`
+        ).join('\n');
+
+        const systemPrompt = `
+          You are LifeSync AI, an elite fitness and lifestyle coach.
+          User: ${userSettings.displayName}. Goal: ${userSettings.fitnessGoal}. Diet: ${userSettings.dietaryPreferences}.
+          Time: ${currentTime.toLocaleTimeString()}. Phase: ${bioPhase.title}. Fasting: ${fastingData.hours}h.
+          
+          Recent Logs:
+          ${recentLogs}
+
+          Respond with a concise, punchy, markdown formatted plan or answer. 
+          Use ### for headers and ** for bold. Keep it actionable.
+        `;
+
+        // Include recent chat history for context (last 6 messages)
+        const history = coachMessages.slice(-6).map(m => ({ role: m.role, content: m.content }));
+
+        const apiMessages = [
+            { role: "system", content: systemPrompt },
+            ...history,
+            { role: "user", content: textInput }
+        ];
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${cleanedKey}`
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: apiMessages,
+              max_tokens: 400
+            })
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+
+        // 3. Save AI Response
+        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'coach_messages'), {
+            role: 'assistant',
+            content: data.choices[0].message.content,
+            createdAt: new Date().toISOString()
+        });
 
     } catch (error) {
-      console.error("AI Error:", error);
-      setCoachResponse(`Error: ${error.message}. \n\nTroubleshooting:\n1. Check for extra spaces in Settings.\n2. Ensure your OpenAI account has credit balance (not just a linked card).`);
+       console.error("AI Error", error);
+       alert("Error communicating with Coach. Check API key.");
     } finally {
-      setCoachLoading(false);
+       setCoachLoading(false);
     }
   };
+
 
   // --- Render Views ---
 
@@ -821,65 +905,87 @@ export default function LifeSync() {
   );
 
   const renderCoach = () => (
-    <div className="flex flex-col h-full pb-24 animate-fade-in">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="flex flex-col h-full animate-fade-in relative">
+      {/* Header */}
+      <div className="flex-shrink-0 flex items-center gap-3 mb-4 px-1">
         <div className="p-2 bg-violet-500/20 rounded-full text-violet-400">
           <Sparkles size={24} />
         </div>
         <h2 className="text-2xl font-bold text-white">AI Coach</h2>
       </div>
 
-      {!userSettings.fitnessGoal && !userSettings.dietaryPreferences ? (
-         <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl text-yellow-200 text-sm mb-6">
-            ⚠ Please fill out your Goals & Diet in Profile Settings to get the best advice.
+      {/* API Key Warning */}
+      {!apiKey && (
+         <div className="flex-shrink-0 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-center space-y-2 mb-4 mx-1">
+            <Key className="mx-auto text-red-400" size={24} />
+            <h3 className="font-bold text-white text-sm">API Key Missing</h3>
+            <Button variant="secondary" onClick={() => setActiveTab('profile')} className="w-full h-8 text-xs">Go to Settings</Button>
          </div>
-      ) : null}
-
-      {!apiKey ? (
-         <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl text-center space-y-4">
-            <Key className="mx-auto text-red-400" size={32} />
-            <h3 className="font-bold text-white">API Key Missing</h3>
-            <p className="text-sm text-zinc-400">To use the AI Coach securely, please enter your OpenAI API key in the Profile Settings.</p>
-            <Button variant="secondary" onClick={() => setActiveTab('profile')} className="w-full">Go to Settings</Button>
-         </div>
-      ) : (
-        <>
-          <div className="flex-1 overflow-y-auto space-y-6">
-            {coachResponse ? (
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4 animate-slide-up">
-                <div className="flex justify-between items-start">
-                   <h3 className="text-violet-400 font-bold uppercase tracking-widest text-xs">Your Action Plan</h3>
-                   <button onClick={() => setCoachResponse(null)} className="text-zinc-500 hover:text-white"><X size={16}/></button>
-                </div>
-                <div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap text-zinc-200 leading-relaxed">
-                  {coachResponse}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-center opacity-50 space-y-4">
-                <Brain size={48} className="text-zinc-600" />
-                <p className="text-zinc-500">Tap generate to analyze your logs and get a plan.</p>
-              </div>
-            )}
-          </div>
-
-          <Button 
-            variant="purple" 
-            onClick={handleAskCoach} 
-            disabled={coachLoading} 
-            className="w-full py-4 text-lg font-bold mt-4"
-          >
-            {coachLoading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/>
-                Analyzing...
-              </span>
-            ) : (
-              "Generate Plan"
-            )}
-          </Button>
-        </>
       )}
+
+      {/* Chat Area */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-6 pb-24">
+         {coachMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-center opacity-50 space-y-4 mt-10">
+              <Brain size={64} className="text-zinc-700" />
+              <p className="text-zinc-500 max-w-xs">
+                Ready to analyze your logs. Tap below to generate your personalized plan.
+              </p>
+              <Button variant="purple" onClick={handleGeneratePlan} disabled={coachLoading}>
+                {coachLoading ? 'Generating...' : 'Generate Plan'}
+              </Button>
+            </div>
+         ) : (
+           <>
+             {coachMessages.map((msg) => (
+               <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                 <div className={`max-w-[85%] rounded-2xl p-4 border ${
+                   msg.role === 'user' 
+                     ? 'bg-zinc-800 border-zinc-700 text-white rounded-tr-sm' 
+                     : 'bg-violet-500/10 border-violet-500/20 text-zinc-200 rounded-tl-sm'
+                 }`}>
+                   {msg.role === 'user' ? (
+                     msg.content
+                   ) : (
+                     <MarkdownText text={msg.content} />
+                   )}
+                 </div>
+               </div>
+             ))}
+             {coachLoading && (
+               <div className="flex justify-start">
+                 <div className="bg-zinc-900/50 rounded-2xl p-4 border border-zinc-800 flex gap-2 items-center">
+                   <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"></span>
+                   <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce delay-100"></span>
+                   <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce delay-200"></span>
+                 </div>
+               </div>
+             )}
+             <div ref={chatEndRef} />
+           </>
+         )}
+      </div>
+
+      {/* Input Area */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-zinc-950/80 backdrop-blur-md border-t border-zinc-800 pb-safe">
+         <div className="flex gap-2">
+           <input
+             type="text"
+             value={chatInput}
+             onChange={(e) => setChatInput(e.target.value)}
+             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(chatInput)}
+             placeholder="Ask your coach..."
+             className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 text-white focus:outline-none focus:border-violet-500 transition-colors"
+           />
+           <button 
+             onClick={() => handleSendMessage(chatInput)}
+             disabled={coachLoading || !chatInput.trim()}
+             className="p-3 bg-violet-600 text-white rounded-xl hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+           >
+             <Send size={20} />
+           </button>
+         </div>
+      </div>
     </div>
   );
 
@@ -1603,7 +1709,7 @@ export default function LifeSync() {
         </header>
 
         {/* Content */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 p-6 overflow-y-auto h-[calc(100vh-80px-80px)]"> {/* Added height constraint for scrolling */}
           {activeTab === 'home' && renderTimeline()}
           {activeTab === 'fasting' && renderFasting()}
           {activeTab === 'coach' && renderCoach()}
