@@ -1030,10 +1030,10 @@ export default function LifeSync() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-800 bg-zinc-900/50 text-zinc-400">
                 <Clock size={12} />
                 <span className="text-[10px] font-bold font-mono">
-                  {fastingData.hours}:{fastingData.minutes.toString().padStart(2, '0')}
+                  {fastingData?.hours || 0}:{(fastingData?.minutes || 0).toString().padStart(2, '0')}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-zinc-600"></span>
-                <span className="text-[10px] font-medium text-emerald-400">{fastingData.label}</span>
+                <span className="text-[10px] font-medium text-emerald-400">{fastingData?.label || 'Ready'}</span>
             </div>
           </div>
         </div>
