@@ -35,7 +35,9 @@ import {
   Scroll,
   Sun,
   LogOut,
-  LogIn
+  LogIn,
+  Sparkles,
+  Key
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -73,7 +75,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Set your specific App ID manually since we are outside the preview environment
 const appId = 'lifesync-91884';
 
 // --- Constants & Data ---
@@ -224,6 +225,7 @@ const Button = ({ onClick, variant = "primary", children, className = "", icon: 
     ghost: "bg-transparent text-zinc-400 hover:text-zinc-200",
     danger: "bg-red-500/10 text-red-400 hover:bg-red-500/20",
     cyan: "bg-cyan-500 text-zinc-950 hover:bg-cyan-400 shadow-lg shadow-cyan-500/20",
+    purple: "bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-500/20",
   };
 
   return (
@@ -260,10 +262,15 @@ export default function LifeSync() {
   const [userSettings, setUserSettings] = useState({ 
     displayName: 'Guest', 
     fastingGoal: 16,
+    fitnessGoal: '', // New
+    dietaryPreferences: '', // New
     unlockedAchievements: [],
     activeDetox: null 
   });
-   
+  
+  // API Key Management (LocalStorage for security)
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('lifesync_openai_key') || '');
+  
   // UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTypeSelectorOpen, setIsTypeSelectorOpen] = useState(false); 
@@ -275,6 +282,10 @@ export default function LifeSync() {
   const [isSaving, setIsSaving] = useState(false);
   const [newUnlock, setNewUnlock] = useState(null); 
   const [currentMantra, setCurrentMantra] = useState(MANTRAS[0]);
+  
+  // AI Coach State
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachResponse, setCoachResponse] = useState(null);
 
   // Form States
   const [note, setNote] = useState('');
@@ -283,7 +294,7 @@ export default function LifeSync() {
   const [entryTime, setEntryTime] = useState('');
   const [tempGoal, setTempGoal] = useState(16); 
 
-  // --- NEW: Workout Builder State ---
+  // Workout Builder State
   const [exercises, setExercises] = useState([]); 
   const [exName, setExName] = useState('');
   const [exWeight, setExWeight] = useState('');
@@ -315,6 +326,11 @@ export default function LifeSync() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Save API Key to LocalStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('lifesync_openai_key', apiKey);
+  }, [apiKey]);
 
   // --- Google Auth Actions ---
   const handleGoogleSignIn = async () => {
@@ -418,7 +434,6 @@ export default function LifeSync() {
   // Bio Phase Logic
   const bioPhase = useMemo(() => {
     const hour = currentTime.getHours();
-    
     if (hour >= 7 && hour < 15) return { id: 1, title: "Phase 1", desc: "Deep Work", color: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10" };
     if (hour >= 15 && hour < 23) return { id: 2, title: "Phase 2", desc: "Creative", color: "text-violet-400 border-violet-500/30 bg-violet-500/10" };
     return { id: 3, title: "Phase 3", desc: "Rest", color: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10" };
@@ -503,7 +518,6 @@ export default function LifeSync() {
     }
   };
 
-  // New Helper: Add exercise to temporary list
   const addExerciseToSession = () => {
     if (!exName) return;
     const newEx = {
@@ -513,14 +527,11 @@ export default function LifeSync() {
       reps: exReps
     };
     setExercises([...exercises, newEx]);
-    
-    // Reset inputs
     setExWeight('');
     setExReps('');
     setExName(''); 
   };
 
-  // New Helper: Remove exercise
   const removeExercise = (id) => {
     setExercises(exercises.filter(e => e.id !== id));
   };
@@ -612,7 +623,6 @@ export default function LifeSync() {
     setTags('');
     setEntryTime('');
     setModalType(null);
-    // Clean up workout builder
     setExercises([]);
     setExName('');
     setExWeight('');
@@ -637,6 +647,69 @@ export default function LifeSync() {
     return now.toISOString().slice(0, 16);
   };
 
+  // --- AI Coach Functionality ---
+
+  const handleAskCoach = async () => {
+    if (!apiKey) {
+      alert("Please enter your OpenAI API Key in Profile -> Settings.");
+      return;
+    }
+
+    setCoachLoading(true);
+    setCoachResponse(null);
+
+    // 1. Construct Prompt Context
+    const recentLogs = entries.slice(0, 8).map(e => 
+      `- ${e.type.toUpperCase()} (${new Date(e.timestamp).toLocaleTimeString()}): ${e.title}. ${e.note || ''}`
+    ).join('\n');
+
+    const prompt = `
+      You are LifeSync AI, an elite fitness and lifestyle coach using the "Dopamine Detox" protocol.
+      
+      User Profile:
+      - Name: ${userSettings.displayName}
+      - Goal: ${userSettings.fitnessGoal || 'General Health'}
+      - Diet: ${userSettings.dietaryPreferences || 'None'}
+      - Current Time: ${currentTime.toLocaleTimeString()}
+      - Bio Phase: ${bioPhase.title} (${bioPhase.desc})
+      - Fasting State: ${fastingData.label} (${fastingData.hours}h fasted)
+      
+      Recent Activity:
+      ${recentLogs}
+
+      Based on the time of day, their goal, and their recent logs, provide a concise, punchy recommendation in Markdown format.
+      Include:
+      1. **Next Meal Idea** (Specific to their diet & fasting state)
+      2. **Workout Suggestion** (If they haven't workout out, or recovery if they have)
+      3. **Mantra** (One line motivation)
+    `;
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "system", content: prompt }],
+          max_tokens: 300
+        })
+      });
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      setCoachResponse(data.choices[0].message.content);
+
+    } catch (error) {
+      console.error("AI Error:", error);
+      setCoachResponse(`Error: ${error.message}. Check your API Key in Settings.`);
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
   // --- Render Views ---
 
   const renderTimeline = () => (
@@ -645,8 +718,6 @@ export default function LifeSync() {
         <div>
           <h2 className="text-2xl font-bold text-white">Timeline</h2>
           <p className="text-zinc-400 text-sm mb-3">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-           
-          {/* Phase Badge */}
           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${bioPhase.color}`}>
               <span className="text-[10px] font-bold uppercase tracking-wider">{bioPhase.title}</span>
               <span className="w-1 h-1 rounded-full bg-current opacity-50"></span>
@@ -682,7 +753,6 @@ export default function LifeSync() {
                   entry.type === 'workout' ? 'bg-emerald-400' : 
                   entry.type === 'detox' ? 'bg-cyan-400' : 'bg-violet-400'}`} 
               />
-              
               <div className="flex justify-between items-start group">
                 <div className="w-full">
                   <span className="text-xs font-mono text-zinc-500 mb-1 block">
@@ -694,8 +764,6 @@ export default function LifeSync() {
                        {entry.duration} mins
                     </span>
                   )}
-                  
-                  {/* Display Detailed Exercises if present */}
                   {entry.exercises && entry.exercises.length > 0 && (
                     <div className="mt-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-3 space-y-2">
                       {entry.exercises.map((ex, i) => (
@@ -710,7 +778,6 @@ export default function LifeSync() {
                       ))}
                     </div>
                   )}
-
                   {entry.note && <p className="text-zinc-400 text-sm mt-2 whitespace-pre-wrap">{entry.note}</p>}
                   {entry.tags && entry.tags.length > 0 && (
                     <div className="flex gap-2 mt-3">
@@ -730,6 +797,69 @@ export default function LifeSync() {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+
+  const renderCoach = () => (
+    <div className="flex flex-col h-full pb-24 animate-fade-in">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-violet-500/20 rounded-full text-violet-400">
+          <Sparkles size={24} />
+        </div>
+        <h2 className="text-2xl font-bold text-white">AI Coach</h2>
+      </div>
+
+      {!userSettings.fitnessGoal && !userSettings.dietaryPreferences ? (
+         <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl text-yellow-200 text-sm mb-6">
+            ⚠ Please fill out your Goals & Diet in Profile Settings to get the best advice.
+         </div>
+      ) : null}
+
+      {!apiKey ? (
+         <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl text-center space-y-4">
+            <Key className="mx-auto text-red-400" size={32} />
+            <h3 className="font-bold text-white">API Key Missing</h3>
+            <p className="text-sm text-zinc-400">To use the AI Coach securely, please enter your OpenAI API key in the Profile Settings.</p>
+            <Button variant="secondary" onClick={() => setActiveTab('profile')} className="w-full">Go to Settings</Button>
+         </div>
+      ) : (
+        <>
+          <div className="flex-1 overflow-y-auto space-y-6">
+            {coachResponse ? (
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4 animate-slide-up">
+                <div className="flex justify-between items-start">
+                   <h3 className="text-violet-400 font-bold uppercase tracking-widest text-xs">Your Action Plan</h3>
+                   <button onClick={() => setCoachResponse(null)} className="text-zinc-500 hover:text-white"><X size={16}/></button>
+                </div>
+                <div className="prose prose-invert prose-sm max-w-none whitespace-pre-wrap text-zinc-200 leading-relaxed">
+                  {coachResponse}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-center opacity-50 space-y-4">
+                <Brain size={48} className="text-zinc-600" />
+                <p className="text-zinc-500">Tap generate to analyze your logs and get a plan.</p>
+              </div>
+            )}
+          </div>
+
+          <Button 
+            variant="purple" 
+            onClick={handleAskCoach} 
+            disabled={coachLoading} 
+            className="w-full py-4 text-lg font-bold mt-4"
+          >
+            {coachLoading ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/>
+                Analyzing...
+              </span>
+            ) : (
+              "Generate Plan"
+            )}
+          </Button>
+        </>
       )}
     </div>
   );
@@ -911,39 +1041,6 @@ export default function LifeSync() {
     </div>
   );
 
-  const renderStats = () => (
-    <div className="space-y-6 pb-24 animate-fade-in">
-      <h2 className="text-2xl font-bold text-white mb-6">Weekly Trends</h2>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="bg-gradient-to-br from-zinc-900 to-zinc-900 border-zinc-800">
-          <div className="flex items-center gap-2 mb-3 text-orange-400">
-            <Utensils size={20} />
-            <span className="font-medium">Meals</span>
-          </div>
-          <div className="text-3xl font-bold text-white mb-1">{stats.meals}</div>
-          <p className="text-xs text-zinc-500">Logged this week</p>
-        </Card>
-        <Card className="bg-gradient-to-br from-zinc-900 to-zinc-900 border-zinc-800">
-          <div className="flex items-center gap-2 mb-3 text-emerald-400">
-            <Dumbbell size={20} />
-            <span className="font-medium">Workouts</span>
-          </div>
-          <div className="text-3xl font-bold text-white mb-1">{stats.workouts}</div>
-          <p className="text-xs text-zinc-500">Sessions completed</p>
-        </Card>
-      </div>
-
-      <Card>
-        <h3 className="text-lg font-medium text-zinc-200 mb-4">Activity Breakdown</h3>
-        <StatBar label="Nutrition" value={stats.meals} max={21} color="bg-orange-500" />
-        <StatBar label="Fitness" value={stats.workouts} max={7} color="bg-emerald-500" />
-        <StatBar label="Mindfulness" value={stats.journals} max={7} color="bg-violet-500" />
-        <StatBar label="Detox (Hrs)" value={stats.detox} max={24} color="bg-cyan-500" />
-      </Card>
-    </div>
-  );
-
   const renderProfile = () => (
     <div className="space-y-6 pb-24 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
@@ -1036,14 +1133,53 @@ export default function LifeSync() {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Fasting Goal (h)</label>
+                <input 
+                  type="number" 
+                  value={userSettings.fastingGoal}
+                  onChange={(e) => setUserSettings({...userSettings, fastingGoal: parseInt(e.target.value) || 16})}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Fitness Goal</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Bulking"
+                  value={userSettings.fitnessGoal || ''}
+                  onChange={(e) => setUserSettings({...userSettings, fitnessGoal: e.target.value})}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Fasting Goal (Hours)</label>
+              <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Dietary Preferences</label>
               <input 
-                type="number" 
-                value={userSettings.fastingGoal}
-                onChange={(e) => setUserSettings({...userSettings, fastingGoal: parseInt(e.target.value) || 16})}
+                type="text" 
+                placeholder="e.g. Keto, Vegan, None"
+                value={userSettings.dietaryPreferences || ''}
+                onChange={(e) => setUserSettings({...userSettings, dietaryPreferences: e.target.value})}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
               />
+            </div>
+
+            <div className="pt-4 border-t border-zinc-800 mt-2">
+               <label className="text-xs text-violet-400 font-medium uppercase block mb-2 flex items-center gap-2">
+                  <Sparkles size={12} /> OpenAI API Key
+               </label>
+               <input 
+                type="password" 
+                placeholder="sk-proj-..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500 placeholder:text-zinc-700"
+              />
+              <p className="text-[10px] text-zinc-500 mt-1">
+                Saved locally in your browser. Never synced to server.
+              </p>
             </div>
 
             <Button onClick={handleSaveSettings} disabled={isSaving} className="w-full mt-2">
@@ -1442,8 +1578,8 @@ export default function LifeSync() {
         <div className="flex-1 p-6 overflow-y-auto">
           {activeTab === 'home' && renderTimeline()}
           {activeTab === 'fasting' && renderFasting()}
+          {activeTab === 'coach' && renderCoach()}
           {activeTab === 'detox' && renderDetox()}
-          {activeTab === 'trends' && renderStats()}
           {activeTab === 'profile' && renderProfile()}
         </div>
 
@@ -1479,11 +1615,11 @@ export default function LifeSync() {
               </div>
 
               <button 
-                onClick={() => setActiveTab('trends')}
-                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'trends' ? 'text-white' : 'text-zinc-600'}`}
+                onClick={() => setActiveTab('coach')}
+                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'coach' ? 'text-violet-400' : 'text-zinc-600'}`}
               >
-                <TrendingUp size={24} />
-                <span className="text-[10px] font-medium">Trends</span>
+                <Sparkles size={24} />
+                <span className="text-[10px] font-medium">Coach</span>
               </button>
 
               <button 
