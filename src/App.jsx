@@ -44,7 +44,7 @@ import {
   MessageSquare,
   ChevronDown,
   RefreshCw,
-  ListChecks, // Added for Routine tab
+  ListChecks,
   CheckCircle,
   Circle
 } from 'lucide-react';
@@ -717,8 +717,6 @@ export default function LifeSync() {
      if (!user) return;
      const today = new Date().toISOString().split('T')[0];
      
-     // Optimistic UI update is hard with Firestore directly, so we rely on realtime listener
-     // Find the routine to get current state
      const routine = routines.find(r => r.id === routineId);
      if (!routine) return;
      
@@ -1049,14 +1047,84 @@ export default function LifeSync() {
     </div>
   );
 
+  const renderFasting = () => (
+    <div className="flex flex-col items-center pt-10 h-full pb-20 animate-fade-in relative min-h-[60vh]">
+      <div className="absolute top-0 right-0">
+        <button 
+          onClick={() => setIsInfoModalOpen(true)}
+          className="text-zinc-500 hover:text-emerald-400 transition-colors p-2"
+        >
+          <Info size={22} />
+        </button>
+      </div>
+
+      <div className="relative w-64 h-64 flex items-center justify-center mb-8">
+        <div className="absolute inset-0 rounded-full border-8 border-zinc-800"></div>
+        <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+          <circle
+            cx="128"
+            cy="128"
+            r="120"
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            className="text-emerald-500 transition-all duration-1000 ease-linear" 
+            strokeDasharray={2 * Math.PI * 120}
+            strokeDashoffset={2 * Math.PI * 120 * (1 - (Number.isNaN(fastingData.progress) ? 0 : fastingData.progress) / 100)}
+            strokeLinecap="round"
+          />
+        </svg>
+        
+        <div className="text-center z-10 flex flex-col items-center">
+          <div className="text-zinc-400 text-sm font-medium mb-2">Current Fast</div>
+          <div className="text-5xl font-bold text-white font-mono tracking-tighter flex items-baseline">
+            <span>{fastingData.hours}</span>
+            <span className="mx-1">:</span>
+            <span>{fastingData.minutes.toString().padStart(2, '0')}</span>
+          </div>
+          <div className="text-2xl font-mono text-zinc-500 mt-1 font-bold">
+             {fastingData.seconds.toString().padStart(2, '0')}
+          </div>
+          <div className="text-emerald-400 text-xs font-bold uppercase tracking-widest mt-3">
+            {fastingData.label}
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full max-w-xs grid grid-cols-2 gap-4">
+        <Card className="text-center py-4">
+          <div className="text-zinc-500 text-xs mb-1">Last Meal</div>
+          <div className="text-zinc-200 font-medium">
+            {lastMeal ? new Date(lastMeal.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+          </div>
+        </Card>
+        
+        <Card 
+          onClick={openGoalModal}
+          className="text-center py-4 cursor-pointer hover:bg-zinc-800/50 transition-colors relative group"
+        >
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500">
+             <Edit2 size={12} />
+          </div>
+          <div className="text-zinc-500 text-xs mb-1">Goal</div>
+          <div className="text-zinc-200 font-medium">{userSettings.fastingGoal} Hours</div>
+        </Card>
+      </div>
+
+      {fastingData.hours >= userSettings.fastingGoal && (
+        <div className="mt-8 bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-full text-sm font-medium animate-pulse">
+          Target Reached!
+        </div>
+      )}
+    </div>
+  );
+
   const renderRoutine = () => {
      const todayIndex = new Date().getDay();
      const todayStr = new Date().toISOString().split('T')[0];
      
-     // Filter routines for today
      const todaysRoutines = routines.filter(r => r.days.includes(todayIndex));
      
-     // Sort: Not completed first
      todaysRoutines.sort((a, b) => {
         const aDone = (a.completedDates || []).includes(todayStr);
         const bDone = (b.completedDates || []).includes(todayStr);
@@ -1133,7 +1201,6 @@ export default function LifeSync() {
              </div>
           )}
 
-          {/* Create Routine Modal */}
           {isRoutineModalOpen && (
              <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
                 <div className="bg-zinc-900 w-full max-w-sm rounded-3xl border border-zinc-800 p-6 animate-slide-up shadow-2xl">
@@ -1212,7 +1279,6 @@ export default function LifeSync() {
 
     return (
       <div className="flex flex-col h-full animate-fade-in relative">
-        {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between mb-4 px-1">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-violet-500/20 rounded-full text-violet-400">
@@ -1232,7 +1298,6 @@ export default function LifeSync() {
           )}
         </div>
 
-        {/* API Key Warning */}
         {!apiKey && (
            <div className="flex-shrink-0 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-center space-y-2 mb-4 mx-1">
               <Key className="mx-auto text-red-400" size={24} />
@@ -1241,7 +1306,6 @@ export default function LifeSync() {
            </div>
         )}
 
-        {/* Chat Area */}
         <div className="flex-1 overflow-y-auto p-2 space-y-6 pb-36">
            {coachMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-8 opacity-100">
@@ -1315,10 +1379,7 @@ export default function LifeSync() {
            )}
         </div>
 
-        {/* Input Area */}
         <div className="absolute bottom-0 left-0 right-0 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800 pb-safe transition-all">
-           
-           {/* Mini Quick Chips (visible when chatting) */}
            {coachMessages.length > 0 && (
              <div className="flex gap-2 overflow-x-auto px-4 py-3 no-scrollbar">
                {quickActions.map((action, i) => (
@@ -2017,6 +2078,15 @@ export default function LifeSync() {
                 <Clock size={24} />
                 <span className="text-[10px] font-medium">Fasting</span>
               </button>
+              
+              {/* Routine Button */}
+              <button 
+                onClick={() => setActiveTab('routine')}
+                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'routine' ? 'text-orange-400' : 'text-zinc-600'}`}
+              >
+                <ListChecks size={24} />
+                <span className="text-[10px] font-medium">Routine</span>
+              </button>
 
               <div className="relative -top-6">
                 <button 
@@ -2027,13 +2097,14 @@ export default function LifeSync() {
                   <Plus size={28} strokeWidth={2.5} />
                 </button>
               </div>
-
+              
+              {/* Detox Button */}
               <button 
-                onClick={() => setActiveTab('routine')}
-                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'routine' ? 'text-orange-400' : 'text-zinc-600'}`}
+                onClick={() => setActiveTab('detox')}
+                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'detox' ? 'text-cyan-400' : 'text-zinc-600'}`}
               >
-                <ListChecks size={24} />
-                <span className="text-[10px] font-medium">Routine</span>
+                <Brain size={24} />
+                <span className="text-[10px] font-medium">Detox</span>
               </button>
 
               <button 
