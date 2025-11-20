@@ -1487,30 +1487,34 @@ export default function LifeSync() {
 
      if (isActive) {
        return (
-         <div className="flex flex-col items-center justify-center h-full pb-20 animate-fade-in">
-            <div className="relative w-64 h-64 flex items-center justify-center mb-8">
-              <div className="absolute inset-0 rounded-full border-8 border-zinc-800"></div>
+         <div className="flex flex-col items-center justify-center min-h-[70vh] pb-24 animate-fade-in space-y-12">
+            <div className="relative w-72 h-72 flex items-center justify-center">
+              {/* Outer Glow */}
+              <div className="absolute inset-0 rounded-full bg-cyan-500/10 blur-3xl animate-pulse"></div>
+              
+              <div className="absolute inset-0 rounded-full border-8 border-zinc-900 shadow-2xl"></div>
               <div className="absolute inset-0 rounded-full border-4 border-cyan-500/30 animate-ping opacity-20"></div>
+              
               <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_25px_rgba(6,182,212,0.5)]">
                 <circle
-                  cx="128"
-                  cy="128"
-                  r="120"
+                  cx="144"
+                  cy="144"
+                  r="130"
                   stroke="currentColor"
-                  strokeWidth="6"
+                  strokeWidth="8"
                   fill="transparent"
                   className="text-cyan-400"
-                  strokeDasharray={2 * Math.PI * 120}
+                  strokeDasharray={2 * Math.PI * 130}
                   strokeDashoffset={0}
                   strokeLinecap="round"
                 />
               </svg>
               
               <div className="text-center z-10 flex flex-col items-center">
-                <div className="text-cyan-400 text-sm font-bold uppercase tracking-widest mb-2">Focus Mode</div>
-                <div className="text-5xl font-bold text-white font-mono tracking-tighter flex items-baseline">
+                <div className="text-cyan-400 text-xs font-bold uppercase tracking-widest mb-3 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">Focus Mode</div>
+                <div className="text-6xl font-bold text-white font-mono tracking-tighter flex items-baseline filter drop-shadow-lg">
                   <span>{detoxData?.hours}</span>
-                  <span className="mx-1">:</span>
+                  <span className="mx-1 text-cyan-500/50">:</span>
                   <span>{detoxData?.minutes.toString().padStart(2, '0')}</span>
                 </div>
                 <div className="text-2xl font-mono text-zinc-500 mt-1 font-bold">
@@ -1519,79 +1523,91 @@ export default function LifeSync() {
               </div>
             </div>
 
-            <div className="text-center mb-12 px-6">
-              <p className="text-zinc-400 text-sm font-medium italic animate-pulse">
-                "{currentMantra}"
-              </p>
-            </div>
+            <div className="w-full max-w-sm space-y-8 px-4">
+              <div className="text-center">
+                <p className="text-zinc-400 text-sm font-medium italic animate-pulse leading-relaxed">
+                  "{currentMantra}"
+                </p>
+              </div>
 
-            <Button variant="danger" onClick={handleEndDetox} className="w-full max-w-xs py-4 text-lg font-bold border border-red-500/30">
-              End Session
-            </Button>
+              <Button variant="danger" onClick={handleEndDetox} className="w-full py-4 text-lg font-bold border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)] hover:shadow-[0_0_40px_rgba(239,68,68,0.4)] transition-all">
+                End Session
+              </Button>
+            </div>
          </div>
        )
      }
 
      return (
-       <div className="flex flex-col h-full pb-24 animate-fade-in">
-          <h2 className="text-2xl font-bold text-white mb-6">Dopamine Detox</h2>
+       <div className="flex flex-col pb-32 animate-fade-in space-y-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-cyan-500/10 rounded-full text-cyan-400 border border-cyan-500/20">
+              <Brain size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Dopamine Detox</h2>
+          </div>
           
-          {/* Live Detox */}
+          {/* Live Detox Card */}
           <button 
             onClick={() => handleStartDetox('Total')} 
-            className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl hover:bg-zinc-800 hover:border-cyan-500/50 transition-all group text-left mb-8 relative overflow-hidden"
+            className="relative w-full overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 p-6 rounded-3xl hover:border-cyan-500/50 transition-all group text-left shadow-xl"
           >
-             <div className="relative z-10 flex items-center gap-4">
-                <div className="p-4 bg-cyan-500/10 rounded-full text-cyan-400 group-hover:scale-110 transition-transform">
-                    <Brain size={32} />
-                </div>
-                <div>
-                    <h3 className="text-xl font-bold text-white mb-1">Start Total Detox</h3>
-                    <p className="text-zinc-400 text-sm">Block all cheap dopamine sources. Reset your brain.</p>
-                </div>
+             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-500 transform group-hover:scale-110 origin-top-right">
+                <Zap size={120} className="text-cyan-500" />
              </div>
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Zap size={80} className="text-cyan-500" />
+             
+             <div className="relative z-10 flex flex-col gap-4">
+                <div className="inline-flex items-center gap-2 bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full w-fit border border-cyan-500/20">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span className="text-xs font-bold uppercase tracking-wide">Start Now</span>
+                </div>
+                
+                <div>
+                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-cyan-100 transition-colors">Total Detox</h3>
+                    <p className="text-zinc-400 text-sm leading-relaxed max-w-[80%]">
+                      Enter a state of deep focus. Block cheap dopamine sources to reset your baseline.
+                    </p>
+                </div>
              </div>
           </button>
 
-          {/* Manual Log */}
-          <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-3xl mb-8">
-             <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                <Clock size={18} className="text-zinc-400" />
-                Log Past Session
-             </h3>
+          {/* Manual Log Card */}
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl space-y-5 shadow-sm">
+             <div className="flex items-center gap-2 text-zinc-200 font-bold">
+                <Clock size={18} className="text-zinc-500" />
+                <h3>Log Past Session</h3>
+             </div>
              
              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="text-xs text-zinc-500 font-medium uppercase block mb-1.5">Started</label>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider pl-1">Started</label>
                         <input 
                             type="datetime-local" 
                             value={manualDetoxStart}
                             onChange={(e) => setManualDetoxStart(e.target.value)}
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-cyan-500 transition-colors"
                         />
                     </div>
-                    <div>
-                        <label className="text-xs text-zinc-500 font-medium uppercase block mb-1.5">Ended</label>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider pl-1">Ended</label>
                         <input 
                             type="datetime-local" 
                             value={manualDetoxEnd}
                             onChange={(e) => setManualDetoxEnd(e.target.value)}
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-cyan-500 transition-colors"
                         />
                     </div>
                 </div>
                 
-                <div>
-                    <label className="text-xs text-zinc-500 font-medium uppercase block mb-1.5">Notes</label>
+                <div className="space-y-1.5">
+                    <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider pl-1">Notes</label>
                     <textarea 
                         rows="2"
                         placeholder="How did it feel? What did you do instead?"
                         value={manualDetoxNote}
                         onChange={(e) => setManualDetoxNote(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none"
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none transition-colors"
                     />
                 </div>
 
@@ -1599,36 +1615,39 @@ export default function LifeSync() {
                     onClick={handleManualDetoxLog} 
                     disabled={!manualDetoxStart || !manualDetoxEnd || isSaving}
                     variant="cyan"
-                    className="w-full py-2 text-sm"
+                    className="w-full py-3 text-sm font-bold shadow-lg shadow-cyan-500/10"
                 >
                     Log Session
                 </Button>
              </div>
           </div>
 
-          {/* Protocol Card */}
+          {/* Protocol Link */}
           <div 
             onClick={() => setIsManifestoOpen(true)}
-            className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-zinc-800 transition-colors mb-6 group"
+            className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-zinc-800 hover:border-zinc-700 transition-all group"
           >
-              <div className="p-3 bg-cyan-500/10 rounded-full text-cyan-400 group-hover:bg-cyan-500/20 group-hover:scale-105 transition-all">
-                <Scroll size={24} />
+              <div className="p-3 bg-zinc-950 rounded-xl text-cyan-400 group-hover:scale-105 transition-transform border border-zinc-800">
+                <Scroll size={20} />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-white">Dopamine Protocol</h3>
-                <p className="text-xs text-zinc-500">Read the 11 rules for mental clarity.</p>
+                <h3 className="font-bold text-zinc-200 group-hover:text-white transition-colors">Dopamine Protocol</h3>
+                <p className="text-xs text-zinc-500">Read the 11 rules for mental clarity</p>
               </div>
-              <ChevronRight className="text-zinc-600 group-hover:text-white" />
+              <ChevronRight className="text-zinc-600 group-hover:text-white group-hover:translate-x-1 transition-all" size={18} />
           </div>
 
-          <div className="bg-cyan-500/10 border border-cyan-500/20 p-6 rounded-3xl mt-auto relative overflow-hidden">
+          {/* Educational Card */}
+          <div className="bg-gradient-to-br from-cyan-950/30 to-zinc-900 border border-cyan-500/20 p-6 rounded-3xl relative overflow-hidden">
               <div className="relative z-10">
-                <h3 className="font-bold text-cyan-400 text-lg mb-2">Why Detox?</h3>
-                <p className="text-cyan-100/80 text-sm leading-relaxed">
+                <div className="flex items-center gap-2 mb-3">
+                  <Shield className="text-cyan-400" size={18} />
+                  <h3 className="font-bold text-cyan-100 text-sm uppercase tracking-wide">Why Detox?</h3>
+                </div>
+                <p className="text-zinc-400 text-sm leading-relaxed">
                   Constant stimulation reduces your brain's sensitivity to dopamine. Taking a break resets your baseline, making hard things feel easier.
                 </p>
               </div>
-              <Shield className="absolute -bottom-4 -right-4 text-cyan-500/10" size={120} />
           </div>
        </div>
      )
