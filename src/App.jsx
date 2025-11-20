@@ -41,7 +41,8 @@ import {
   Eye,
   EyeOff,
   Send,      
-  MessageSquare 
+  MessageSquare,
+  ChevronDown // Added
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -258,6 +259,88 @@ const StatBar = ({ label, value, max, color }) => (
   </div>
 );
 
+const TimelineEntry = ({ entry, onDelete }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="relative pl-8">
+      {/* Dot */}
+      <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-zinc-950 
+        ${entry.type === 'meal' ? 'bg-orange-400' : 
+          entry.type === 'workout' ? 'bg-emerald-400' : 
+          entry.type === 'detox' ? 'bg-cyan-400' : 'bg-violet-400'}`} 
+      />
+      
+      <div 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="cursor-pointer group"
+      >
+        <div className="flex justify-between items-start">
+           <div className="flex-1 pr-4">
+             <span className="text-xs font-mono text-zinc-500 mb-1 block">
+               {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+             </span>
+             <h3 className="text-lg font-semibold text-zinc-200 group-hover:text-white transition-colors flex items-center gap-2">
+                {entry.title}
+             </h3>
+           </div>
+           <div className={`text-zinc-600 transition-transform duration-300 mt-1 ${isExpanded ? 'rotate-180' : ''}`}>
+              <ChevronDown size={16} />
+           </div>
+        </div>
+
+        {isExpanded && (
+          <div className="mt-3 animate-fade-in border-l-2 border-zinc-800 pl-3 ml-1 mb-6">
+             {/* Detox Duration */}
+             {entry.type === 'detox' && (
+                <span className="inline-block mb-2 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded border border-cyan-500/30">
+                   {entry.duration} mins
+                </span>
+             )}
+
+             {/* Exercises */}
+             {entry.exercises && entry.exercises.length > 0 && (
+                <div className="bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-3 space-y-2 mb-3">
+                  {entry.exercises.map((ex, i) => (
+                    <div key={i} className="flex justify-between items-center text-sm">
+                      <span className="text-zinc-300 font-medium">{ex.name}</span>
+                      <span className="text-zinc-500 font-mono text-xs">
+                        {ex.weight ? `${ex.weight}lbs` : ''} 
+                        {ex.weight && ex.reps ? ' x ' : ''}
+                        {ex.reps ? `${ex.reps} reps` : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+             )}
+
+             {/* Notes */}
+             {entry.note && <p className="text-zinc-400 text-sm whitespace-pre-wrap mb-3 italic">"{entry.note}"</p>}
+
+             {/* Tags */}
+             {entry.tags && entry.tags.length > 0 && (
+                <div className="flex gap-2 mb-4">
+                  {entry.tags.map((tag, i) => (
+                    <span key={i} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-500">{tag}</span>
+                  ))}
+                </div>
+             )}
+
+             {/* Delete Button */}
+             <button 
+                onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
+                className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 py-1 px-2 rounded hover:bg-red-500/10 transition-colors"
+             >
+               <Trash2 size={14} />
+               Delete Log
+             </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- Custom Markdown Formatter ---
 const MarkdownText = ({ text }) => {
   if (!text) return null;
@@ -266,17 +349,12 @@ const MarkdownText = ({ text }) => {
   return (
     <div className="space-y-2 text-sm leading-relaxed">
       {lines.map((line, i) => {
-        // Header 3 (###)
         if (line.startsWith('### ')) {
           return <h3 key={i} className="text-lg font-bold text-violet-300 mt-4 mb-1">{line.replace('### ', '')}</h3>;
         }
-        
-        // Header 2 (##)
         if (line.startsWith('## ')) {
           return <h2 key={i} className="text-xl font-bold text-white mt-5 mb-2">{line.replace('## ', '')}</h2>;
         }
-
-        // List Items
         if (line.trim().startsWith('- ')) {
           const content = line.trim().substring(2);
           return (
@@ -286,10 +364,7 @@ const MarkdownText = ({ text }) => {
             </div>
           )
         }
-
-        // Standard Paragraph
         if (line.trim() === '') return <div key={i} className="h-2"></div>;
-        
         return <div key={i} className="text-zinc-300">{parseBold(line)}</div>;
       })}
     </div>
@@ -318,8 +393,8 @@ export default function LifeSync() {
   const [userSettings, setUserSettings] = useState({ 
     displayName: 'Guest', 
     fastingGoal: 16,
-    fitnessGoal: '', // New
-    dietaryPreferences: '', // New
+    fitnessGoal: '',
+    dietaryPreferences: '',
     unlockedAchievements: [],
     activeDetox: null 
   });
@@ -342,7 +417,7 @@ export default function LifeSync() {
   
   // AI Coach State
   const [coachLoading, setCoachLoading] = useState(false);
-  const [coachMessages, setCoachMessages] = useState([]); // Persistent messages
+  const [coachMessages, setCoachMessages] = useState([]); 
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
 
@@ -386,7 +461,6 @@ export default function LifeSync() {
     return () => unsubscribe();
   }, []);
 
-  // Save API Key to LocalStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('lifesync_openai_key', apiKey);
   }, [apiKey]);
@@ -438,7 +512,6 @@ export default function LifeSync() {
     return () => unsubscribe();
   }, [user]);
 
-  // --- Fetch Coach Messages ---
   useEffect(() => {
     if (!user) return;
     const q = query(
@@ -447,7 +520,6 @@ export default function LifeSync() {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setCoachMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      // Scroll to bottom on new message
       setTimeout(() => {
         if (chatEndRef.current) {
           chatEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -463,7 +535,6 @@ export default function LifeSync() {
     return () => clearInterval(timer);
   }, []);
    
-  // Cycle Mantras every 30 seconds
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentMantra(MANTRAS[Math.floor(Math.random() * MANTRAS.length)]);
@@ -509,7 +580,6 @@ export default function LifeSync() {
     return { hours: diffHrs, minutes: diffMins, seconds: diffSecs };
   }, [userSettings.activeDetox, currentTime]);
 
-  // Bio Phase Logic
   const bioPhase = useMemo(() => {
     const hour = currentTime.getHours();
     if (hour >= 7 && hour < 15) return { id: 1, title: "Phase 1", desc: "Deep Work", color: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10" };
@@ -583,7 +653,6 @@ export default function LifeSync() {
         note,
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         timestamp: new Date(entryTime).toISOString(),
-        // Save exercises only if workout type
         ...(modalType === 'workout' && { exercises: exercises }) 
       };
 
@@ -776,6 +845,9 @@ export default function LifeSync() {
         - Last Meal: ${lastMeal ? new Date(lastMeal.timestamp).toLocaleString() : 'None recorded'}
         `;
 
+        // Include Dopamine Protocol in Prompt
+        const protocolContext = PRINCIPLES.map(p => `- ${p.title}: ${p.text}`).join('\n');
+
         const systemPrompt = `
           You are LifeSync AI, an elite fitness and lifestyle coach.
           
@@ -786,11 +858,13 @@ export default function LifeSync() {
           - Current Time: ${currentTime.toLocaleString()}
           - Bio Phase: ${bioPhase.title} (${bioPhase.desc})
           
+          DOPAMINE PROTOCOL PRINCIPLES (Always align advice with these):
+          ${protocolContext}
+
           FASTING DATA:
           ${fastingContext}
           
           HISTORY & LOGS:
-          
           [MEAL LOGS]
           ${allMeals || "No meals logged."}
           
@@ -803,6 +877,7 @@ export default function LifeSync() {
           Respond with a concise, punchy, markdown formatted plan or answer. 
           Use ### for headers and ** for bold. Keep it actionable.
           Be context aware of their past workouts and meals to suggest progressions or dietary adjustments.
+          If suggesting breaks or lifestyle changes, reference the Dopamine Protocol principles.
         `;
 
         // 3. Include Full Chat History
@@ -883,54 +958,7 @@ export default function LifeSync() {
       ) : (
         <div className="relative border-l-2 border-zinc-800 ml-4 space-y-8">
           {entries.map((entry) => (
-            <div key={entry.id} className="relative pl-8">
-              <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-zinc-950 
-                ${entry.type === 'meal' ? 'bg-orange-400' : 
-                  entry.type === 'workout' ? 'bg-emerald-400' : 
-                  entry.type === 'detox' ? 'bg-cyan-400' : 'bg-violet-400'}`} 
-              />
-              <div className="flex justify-between items-start group">
-                <div className="w-full">
-                  <span className="text-xs font-mono text-zinc-500 mb-1 block">
-                    {new Date(entry.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <h3 className="text-lg font-semibold text-zinc-200">{entry.title}</h3>
-                  {entry.type === 'detox' && (
-                    <span className="inline-block mt-1 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded border border-cyan-500/30">
-                       {entry.duration} mins
-                    </span>
-                  )}
-                  {entry.exercises && entry.exercises.length > 0 && (
-                    <div className="mt-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-3 space-y-2">
-                      {entry.exercises.map((ex, i) => (
-                        <div key={i} className="flex justify-between items-center text-sm">
-                          <span className="text-zinc-300 font-medium">{ex.name}</span>
-                          <span className="text-zinc-500 font-mono text-xs">
-                            {ex.weight ? `${ex.weight}lbs` : ''} 
-                            {ex.weight && ex.reps ? ' x ' : ''}
-                            {ex.reps ? `${ex.reps} reps` : ''}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {entry.note && <p className="text-zinc-400 text-sm mt-2 whitespace-pre-wrap">{entry.note}</p>}
-                  {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex gap-2 mt-3">
-                      {entry.tags.map((tag, i) => (
-                        <span key={i} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-400">{tag}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button 
-                  onClick={() => handleDelete(entry.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-zinc-600 hover:text-red-400 ml-2"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
+            <TimelineEntry key={entry.id} entry={entry} onDelete={handleDelete} />
           ))}
         </div>
       )}
