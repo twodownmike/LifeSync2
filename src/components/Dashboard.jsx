@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListChecks, Plus, Activity, CheckCircle, Circle, Trash2, Clock } from 'lucide-react';
+import { ListChecks, Plus, Activity, CheckCircle, Circle, Trash2, Clock, Wind } from 'lucide-react';
 import { TimelineEntry } from './TimelineEntry';
 
 export default function Dashboard({ 
@@ -13,7 +13,8 @@ export default function Dashboard({
   onDeleteRoutine, 
   onOpenRoutineModal,
   onOpenGoalModal,
-  onOpenInfoModal
+  onOpenInfoModal,
+  onOpenBreathwork
 }) {
   const [filter, setFilter] = useState('all');
 
@@ -48,6 +49,14 @@ export default function Dashboard({
               <span className="text-[10px] opacity-90 font-medium">{bioPhase.desc}</span>
           </div>
         </div>
+        
+        <button 
+          onClick={onOpenBreathwork}
+          className="p-2 bg-zinc-900 border border-zinc-800 rounded-full text-zinc-400 hover:text-white hover:border-zinc-700 transition-all active:scale-95"
+          title="Shift State"
+        >
+           <Wind size={20} />
+        </button>
       </div>
 
       {/* Routine / Daily Checklist Section */}

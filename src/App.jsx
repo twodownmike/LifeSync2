@@ -9,6 +9,7 @@ import Analytics from './components/Analytics';
 import Coach from './components/Coach';
 import FastingTimer from './components/FastingTimer';
 import Dashboard from './components/Dashboard';
+import Breathwork from './components/Breathwork';
 import { Button } from './components/UI';
 import { useAuth } from './hooks/useAuth';
 import { useLifeSyncData } from './hooks/useLifeSyncData';
@@ -517,6 +518,9 @@ export default function LifeSync() {
              </div>
           </div>
         )}
+
+        {/* Breathwork Overlay */}
+        {isBreathworkOpen && <Breathwork onClose={() => setIsBreathworkOpen(false)} />}
 
       </div>
     </div>
