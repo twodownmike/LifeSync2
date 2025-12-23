@@ -195,6 +195,7 @@ export default function LifeSync() {
                 lastMeal={lastMeal}
                 onOpenGoalModal={() => { setTempGoal(userSettings.fastingGoal); setIsGoalModalOpen(true); }}
                 onOpenInfoModal={() => setIsInfoModalOpen(true)}
+                onLogMeal={() => openModal('meal')}
              />
            )}
            {activeTab === 'focus' && <FocusMode onSessionComplete={handleFocusSessionComplete} />}

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Info, Edit2, ChevronRight, Activity, Zap, Flame, Sparkles, AlertCircle } from 'lucide-react';
-import { Card } from './UI';
+import { Info, Edit2, ChevronRight, Activity, Utensils } from 'lucide-react';
+import { Card, Button } from './UI';
 
-export default function FastingTimer({ fastingData, userSettings, lastMeal, onOpenGoalModal, onOpenInfoModal }) {
+export default function FastingTimer({ fastingData, userSettings, lastMeal, onOpenGoalModal, onOpenInfoModal, onLogMeal }) {
   const radius = 120;
   const circumference = 2 * Math.PI * radius;
   
@@ -11,7 +11,6 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
   const isOvertime = totalHours > goal;
   
   // Progress calculation
-  // If overtime, we can either cap at 100% or loop. Let's cap the main ring and show a glow for overtime.
   const progressPct = Math.min((totalHours / goal) * 100, 100);
   const offset = circumference * (1 - progressPct / 100);
 
@@ -94,8 +93,15 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
   return (
     <div className="flex flex-col items-center pt-2 h-full pb-24 animate-fade-in relative min-h-[60vh] overflow-y-auto scrollbar-hide">
       
+      {/* Header Actions */}
+      <div className="absolute top-0 right-0 p-4 z-20">
+         <button onClick={onOpenInfoModal} className="p-2 bg-zinc-900/50 rounded-full text-zinc-400 hover:text-white border border-zinc-800 backdrop-blur-sm transition-colors">
+            <Info size={20} />
+         </button>
+      </div>
+
       {/* Timer Ring Section */}
-      <div className="relative w-80 h-80 flex items-center justify-center mb-6 flex-shrink-0">
+      <div className="relative w-80 h-80 flex items-center justify-center mb-6 flex-shrink-0 mt-4">
         <svg viewBox="0 0 256 256" className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]">
           {/* Defs for Gradients */}
           <defs>
@@ -169,6 +175,11 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
       {/* Info Cards Container */}
       <div className="w-full max-w-sm px-6 space-y-4">
         
+        {/* End Fast Button */}
+        <Button onClick={onLogMeal} className="w-full bg-zinc-100 text-zinc-950 hover:bg-white hover:scale-[1.02] shadow-xl shadow-white/5" icon={Utensils}>
+           End Fast (Log Meal)
+        </Button>
+
         {/* Metric Bars */}
         <div className="grid grid-cols-3 gap-2">
            {[
