@@ -1,64 +1,47 @@
 import React from 'react';
-import { Info, Edit2, ChevronRight, Activity, Zap, Flame, Sparkles } from 'lucide-react';
+import { Info, Edit2, ChevronRight, Activity, Zap, Flame, Sparkles, AlertCircle } from 'lucide-react';
 import { Card } from './UI';
 
 export default function FastingTimer({ fastingData, userSettings, lastMeal, onOpenGoalModal, onOpenInfoModal }) {
   const radius = 120;
   const circumference = 2 * Math.PI * radius;
   
-  // Protect against NaN
-  const safeProgress = Number.isFinite(fastingData.progress) ? Math.min(fastingData.progress, 100) : 0;
-  const offset = circumference * (1 - safeProgress / 100);
   const totalHours = fastingData.hours + (fastingData.minutes / 60);
+  const goal = Math.max(userSettings.fastingGoal, 1);
+  const isOvertime = totalHours > goal;
+  
+  // Progress calculation
+  // If overtime, we can either cap at 100% or loop. Let's cap the main ring and show a glow for overtime.
+  const progressPct = Math.min((totalHours / goal) * 100, 100);
+  const offset = circumference * (1 - progressPct / 100);
 
   // Phase definitions (in hours)
   const PHASES = [
-    { id: 'digest', label: 'Digesting', start: 0, end: 4, color: '#fb923c', bg: 'text-orange-400', desc: 'Blood sugar rises' }, // Orange
-    { id: 'normal', label: 'Normal', start: 4, end: 12, color: '#60a5fa', bg: 'text-blue-400', desc: 'Insulin drops' },     // Blue
-    { id: 'burn', label: 'Burning', start: 12, end: 18, color: '#34d399', bg: 'text-emerald-400', desc: 'Fat burning starts' },  // Emerald
-    { id: 'auto', label: 'Autophagy', start: 18, end: 72, color: '#a78bfa', bg: 'text-violet-400', desc: 'Cellular repair' }    // Violet
+    { id: 'digest', label: 'Digesting', start: 0, end: 4, color: '#fb923c', bg: 'bg-orange-500', text: 'text-orange-400', desc: 'Blood sugar rises' }, 
+    { id: 'normal', label: 'Normal', start: 4, end: 12, color: '#60a5fa', bg: 'bg-blue-500', text: 'text-blue-400', desc: 'Insulin drops' },     
+    { id: 'burn', label: 'Burning', start: 12, end: 18, color: '#34d399', bg: 'bg-emerald-500', text: 'text-emerald-400', desc: 'Fat burning starts' },  
+    { id: 'auto', label: 'Autophagy', start: 18, end: 72, color: '#a78bfa', bg: 'bg-violet-500', text: 'text-violet-400', desc: 'Cellular repair' }    
   ];
 
-  // Helper to calculate segment dash arrays
-  const getSegmentStroke = (phase) => {
-    const goal = Math.max(userSettings.fastingGoal, 1);
-    
-    // Normalize phase start/end to goal duration (0 to 1)
-    const startPct = Math.min(phase.start / goal, 1);
-    const endPct = Math.min(phase.end / goal, 1);
-    
-    if (startPct >= 1) return null; // Phase is beyond goal
+  const currentPhase = PHASES.find(p => totalHours >= p.start && totalHours < p.end) || PHASES[PHASES.length - 1];
 
-    const length = (endPct - startPct) * circumference;
-    const gap = circumference - length;
-    
-    // Offset calculation: 
-    // SVG circle starts at 3 o'clock by default. We rotated -90deg so it starts at 12 o'clock.
-    // The stroke-dashoffset needs to shift the segment to the correct start position.
-    // A positive offset pushes the dash 'back'.
-    const phaseOffset = circumference * (1 - startPct); // This might need adjustment based on SVG coordinates
+  // Calculate detailed physiological metrics
+  const getMetrics = () => {
+      // Logic approximated based on standard fasting timelines
+      let insulin = 100; // High
+      let ketones = 0;   // None
+      let autophagy = 0; // None
 
-    return {
-        dashArray: `${length} ${gap}`,
-        dashOffset: circumference * (0.25 + startPct) * -1 // Adjust for starting position? 
-        // Let's simplify: rotate entire circle -90. 
-        // Standard offset is usually circumference - (percent * circumference).
-        // For segments, we use dasharray "length gap" and offset "-startPos"
-    };
+      if (totalHours > 4) insulin = Math.max(0, 100 - ((totalHours - 4) * 10)); // Drops 4h-14h
+      if (totalHours > 12) ketones = Math.min(100, (totalHours - 12) * 15);     // Rises 12h+
+      if (totalHours > 18) autophagy = Math.min(100, (totalHours - 18) * 10);   // Rises 18h+
+
+      return { insulin, ketones, autophagy };
   };
 
-  // Simple arc segments approach:
-  // Instead of complex dash math, let's just render the background segments as simple proportional circles
-  // BUT, to keep it clean, maybe just colored ticks or a subtle background track?
-  // Let's stick to the user request: "color code the rings segments"
-  
-  // We will calculate exact dasharray/offset for each phase on the background ring.
-  // Rotated -90deg, 0 is at top.
-  // Dashoffset = 0 starts at 3 o'clock (pre-rotation).
-  // With -90deg rotation, 0 starts at 12 o'clock.
-  
+  const metrics = getMetrics();
+
   const renderPhaseSegments = () => {
-    const goal = Math.max(userSettings.fastingGoal, 1);
     let cumulativePct = 0;
 
     return PHASES.map((phase) => {
@@ -71,14 +54,9 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
       
       const dashLength = circumference * pct;
       const dashGap = circumference - dashLength;
-      
-      // Calculate offset based on previous segments
-      // We need to shift it negatively by the cumulative percentage
       const segmentOffset = -1 * (cumulativePct * circumference);
       
       cumulativePct += pct;
-
-      // Add a tiny gap between segments
       const visualGap = 4; 
       
       return (
@@ -88,9 +66,9 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
           cy="128"
           r={radius}
           stroke={phase.color}
-          strokeWidth="8"
+          strokeWidth="6"
           fill="transparent"
-          strokeOpacity="0.2"
+          strokeOpacity="0.15"
           strokeDasharray={`${Math.max(0, dashLength - visualGap)} ${dashGap + visualGap}`}
           strokeDashoffset={segmentOffset}
           strokeLinecap="round"
@@ -101,11 +79,10 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
   };
 
   const getNextPhase = () => {
-    const currentHours = fastingData.hours + (fastingData.minutes / 60);
-    const nextPhase = PHASES.find(p => p.start > currentHours);
+    const nextPhase = PHASES.find(p => p.start > totalHours);
     if (!nextPhase) return null;
     
-    const timeToNext = nextPhase.start - currentHours;
+    const timeToNext = nextPhase.start - totalHours;
     const hoursToNext = Math.floor(timeToNext);
     const minsToNext = Math.floor((timeToNext - hoursToNext) * 60);
     
@@ -113,101 +90,133 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
   };
 
   const nextPhase = getNextPhase();
-  const currentPhase = PHASES.find(p => totalHours >= p.start && totalHours < p.end) || PHASES[PHASES.length - 1];
 
   return (
-    <div className="flex flex-col items-center pt-6 h-full pb-24 animate-fade-in relative min-h-[60vh] overflow-y-auto scrollbar-hide">
+    <div className="flex flex-col items-center pt-2 h-full pb-24 animate-fade-in relative min-h-[60vh] overflow-y-auto scrollbar-hide">
       
       {/* Timer Ring Section */}
-      <div className="relative w-72 h-72 flex items-center justify-center mb-8 flex-shrink-0">
-        <svg viewBox="0 0 256 256" className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-          {/* Background Track (Dark) */}
+      <div className="relative w-80 h-80 flex items-center justify-center mb-6 flex-shrink-0">
+        <svg viewBox="0 0 256 256" className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+          {/* Defs for Gradients */}
+          <defs>
+             <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={isOvertime ? "#fbbf24" : "#10b981"} />
+                <stop offset="100%" stopColor={isOvertime ? "#f59e0b" : "#34d399"} />
+             </linearGradient>
+             <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+             </filter>
+          </defs>
+
+          {/* Background Track */}
           <circle
              cx="128" cy="128" r={radius}
-             stroke="#18181b" strokeWidth="8" fill="transparent"
+             stroke="#18181b" strokeWidth="12" fill="transparent"
           />
           
           {/* Colored Phase Segments (Background) */}
           {renderPhaseSegments()}
           
-          {/* Active Progress */}
+          {/* Active Progress Ring */}
           <circle
             cx="128"
             cy="128"
             r={radius}
-            stroke="currentColor"
-            strokeWidth="8"
+            stroke="url(#progressGradient)"
+            strokeWidth="12"
             fill="transparent"
-            className={`${currentPhase?.bg.replace('text-', 'text-')} transition-all duration-1000 ease-linear`} 
+            className="transition-all duration-1000 ease-out" 
             strokeDasharray={circumference}
-            strokeDashoffset={Number.isNaN(offset) ? circumference : offset}
+            strokeDashoffset={offset}
             strokeLinecap="round"
+            style={{ filter: 'url(#glow)' }}
           />
+          
+          {/* Current Position Marker (Dot) */}
+          {progressPct > 0 && (
+             <circle 
+                cx="128" cy="8" r="6" fill="#fff"
+                className="transition-all duration-1000 ease-out origin-center"
+                style={{ transform: `rotate(${progressPct * 3.6}deg)`, transformOrigin: '128px 128px' }}
+             />
+          )}
         </svg>
         
+        {/* Center Content */}
         <div className="text-center z-10 flex flex-col items-center absolute inset-0 justify-center">
-          <div className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-2">Elapsed Time</div>
+          <div className={`text-[10px] font-bold uppercase tracking-widest mb-2 px-2 py-0.5 rounded-full ${isOvertime ? 'bg-amber-500/20 text-amber-400' : 'text-zinc-500'}`}>
+             {isOvertime ? 'Goal Reached' : 'Elapsed Time'}
+          </div>
+          
           <div className="text-6xl font-bold text-white font-mono tracking-tighter flex items-baseline filter drop-shadow-lg">
             <span>{fastingData.hours}</span>
             <span className="mx-1 opacity-50 text-4xl">:</span>
             <span>{fastingData.minutes.toString().padStart(2, '0')}</span>
           </div>
-          <div className="text-xl font-mono text-zinc-600 mt-1 font-medium">
+          
+          <div className="text-xl font-mono text-zinc-500 mt-1 font-medium">
              {fastingData.seconds.toString().padStart(2, '0')}
           </div>
           
-          <div className={`mt-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${currentPhase?.bg} ${currentPhase?.bg.replace('text', 'bg').replace('400', '500/10')} border-opacity-20`}>
-            {currentPhase?.label || fastingData.label}
+          <div className={`mt-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-zinc-900 border-zinc-800`}>
+             <span className={`w-2 h-2 rounded-full ${currentPhase?.bg}`}></span>
+             <span className={currentPhase?.text}>{currentPhase?.label || fastingData.label}</span>
           </div>
         </div>
       </div>
 
-      {/* Info Cards */}
+      {/* Info Cards Container */}
       <div className="w-full max-w-sm px-6 space-y-4">
         
-        {/* Next Milestone */}
-        {nextPhase ? (
-           <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
-              <div>
-                 <div className="text-zinc-500 text-xs font-bold uppercase mb-1">Coming up</div>
-                 <div className="text-white font-bold flex items-center gap-2">
-                    {nextPhase.label} Phase
-                    <ChevronRight size={14} className="text-zinc-600" />
+        {/* Metric Bars */}
+        <div className="grid grid-cols-3 gap-2">
+           {[
+             { label: 'Insulin', val: metrics.insulin, color: 'bg-blue-500' },
+             { label: 'Ketones', val: metrics.ketones, color: 'bg-emerald-500' },
+             { label: 'Autophagy', val: metrics.autophagy, color: 'bg-violet-500' }
+           ].map(m => (
+              <div key={m.label} className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-xl flex flex-col gap-2">
+                 <div className="text-[10px] text-zinc-500 font-bold uppercase">{m.label}</div>
+                 <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <div 
+                        className={`h-full rounded-full transition-all duration-1000 ${m.color}`} 
+                        style={{ width: `${m.val}%` }}
+                    />
                  </div>
-                 <div className="text-zinc-400 text-xs mt-1">{nextPhase.desc}</div>
               </div>
-              <div className="text-right">
-                 <div className="text-2xl font-mono font-bold text-zinc-200">
-                    {nextPhase.hoursToNext}<span className="text-sm text-zinc-600 ml-0.5">h</span> {nextPhase.minsToNext}<span className="text-sm text-zinc-600 ml-0.5">m</span>
-                 </div>
-                 <div className="text-[10px] text-zinc-500 font-bold uppercase">Remaining</div>
-              </div>
-           </div>
-        ) : (
-           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/20 rounded-full text-emerald-400">
-                 <Sparkles size={24} />
-              </div>
-              <div>
-                 <div className="text-emerald-400 font-bold">Max Benefits Reached</div>
-                 <div className="text-emerald-500/70 text-xs">You are in deep autophagy.</div>
-              </div>
-           </div>
-        )}
+           ))}
+        </div>
 
         {/* Current State Detail */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 relative overflow-hidden">
-           <div className={`absolute top-0 left-0 w-1 h-full ${currentPhase?.bg.replace('text', 'bg')}`}></div>
-           <div className="flex items-start gap-3 mb-2">
-              <Activity size={18} className={currentPhase?.bg} />
-              <h3 className="font-bold text-zinc-200">Physiological State</h3>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 relative overflow-hidden group">
+           <div className={`absolute top-0 left-0 w-1 h-full ${currentPhase?.bg} transition-colors duration-500`}></div>
+           
+           <div className="flex justify-between items-start mb-2">
+               <div className="flex items-center gap-2">
+                  <Activity size={16} className={currentPhase?.text} />
+                  <h3 className="font-bold text-zinc-200 text-sm">Body Status</h3>
+               </div>
+               {isOvertime && (
+                   <span className="text-[10px] font-bold bg-amber-500/10 text-amber-500 px-2 py-1 rounded border border-amber-500/20">
+                      Zone+
+                   </span>
+               )}
            </div>
+           
            <p className="text-sm text-zinc-400 leading-relaxed">
-             {currentPhase?.id === 'digest' && "Your body is digesting food and absorbing nutrients. Insulin levels are high."}
-             {currentPhase?.id === 'normal' && "Blood sugar levels return to normal. Insulin drops, signaling your body to start burning stored energy."}
-             {currentPhase?.id === 'burn' && "Your body has switched to burning fat for fuel (Ketosis). HGH levels begin to rise."}
-             {currentPhase?.id === 'auto' && "Your cells are recycling old components (Autophagy). Inflammation decreases significantly."}
+             {currentPhase?.id === 'digest' && "Insulin is elevated. Your body is absorbing nutrients from your last meal."}
+             {currentPhase?.id === 'normal' && "Blood sugar stabilizes. You are starting to access stored energy."}
+             {currentPhase?.id === 'burn' && "Fat burning mode engaged. Ketone production increases significantly."}
+             {currentPhase?.id === 'auto' && "Deep cellular cleaning (autophagy). Old cells are being recycled."}
            </p>
+
+           {nextPhase && (
+               <div className="mt-4 pt-3 border-t border-zinc-800/50 flex items-center justify-between">
+                  <span className="text-xs text-zinc-500">Next: <span className="text-white font-medium">{nextPhase.label}</span></span>
+                  <span className="text-xs font-mono text-zinc-400">in {nextPhase.hoursToNext}h {nextPhase.minsToNext}m</span>
+               </div>
+           )}
         </div>
 
         {/* Stats Row */}
