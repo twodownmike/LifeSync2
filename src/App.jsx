@@ -50,6 +50,8 @@ export default function LifeSync() {
   const [tags, setTags] = useState('');
   const [entryTime, setEntryTime] = useState('');
   const [tempGoal, setTempGoal] = useState(16); 
+  const [mood, setMood] = useState(5);
+  const [energy, setEnergy] = useState(5); 
   
   // Workout Builder
   const [exercises, setExercises] = useState([]); 
@@ -86,6 +88,8 @@ export default function LifeSync() {
     setTitle('');
     setTags('');
     setEntryTime('');
+    setMood(5);
+    setEnergy(5);
     setModalType(null);
     setExercises([]);
     setExName('');
@@ -100,6 +104,7 @@ export default function LifeSync() {
         note,
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         timestamp: new Date(entryTime).toISOString(),
+        ...(modalType === 'journal' && { mood, energy }),
         ...(modalType === 'workout' && { exercises: exercises }) 
     });
     closeModal();
@@ -147,6 +152,18 @@ export default function LifeSync() {
     setExWeight('');
     setExReps('');
     setExName(''); 
+  };
+
+  const handleBreathworkComplete = async (minutes, patternName) => {
+    if (!user) return;
+    await addEntry({
+        type: 'breathwork',
+        title: `Breathwork: ${patternName}`,
+        note: `Completed ${minutes} minutes of ${patternName}`,
+        tags: ['mindfulness', 'breathwork'],
+        duration: minutes,
+        timestamp: new Date().toISOString()
+    });
   };
 
   const handleFocusSessionComplete = async (durationMinutes, taskLabel, tag) => {
@@ -374,6 +391,43 @@ export default function LifeSync() {
                      </div>
                    )}
 
+                   {/* Journal Mood/Energy Sliders */}
+                   {modalType === 'journal' && (
+                     <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800 space-y-4">
+                        <div>
+                           <div className="flex justify-between text-xs font-bold uppercase mb-2">
+                              <span className="text-zinc-500">Mood</span>
+                              <span className="text-violet-400">{mood}/10</span>
+                           </div>
+                           <input 
+                              type="range" min="1" max="10" step="1"
+                              value={mood} onChange={(e) => setMood(parseInt(e.target.value))}
+                              className="w-full accent-violet-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                           />
+                           <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
+                              <span>Awful</span>
+                              <span>Excellent</span>
+                           </div>
+                        </div>
+
+                        <div>
+                           <div className="flex justify-between text-xs font-bold uppercase mb-2">
+                              <span className="text-zinc-500">Energy</span>
+                              <span className="text-yellow-500">{energy}/10</span>
+                           </div>
+                           <input 
+                              type="range" min="1" max="10" step="1"
+                              value={energy} onChange={(e) => setEnergy(parseInt(e.target.value))}
+                              className="w-full accent-yellow-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                           />
+                           <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
+                              <span>Drained</span>
+                              <span>Energized</span>
+                           </div>
+                        </div>
+                     </div>
+                   )}
+
                    <div>
                       <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Notes</label>
                       <textarea 
@@ -548,7 +602,7 @@ export default function LifeSync() {
         )}
 
         {/* Breathwork Overlay */}
-        {isBreathworkOpen && <Breathwork onClose={() => setIsBreathworkOpen(false)} />}
+        {isBreathworkOpen && <Breathwork onClose={() => setIsBreathworkOpen(false)} onSessionComplete={handleBreathworkComplete} />}
 
       </div>
     </div>

@@ -41,7 +41,7 @@ const PATTERNS = [
   }
 ];
 
-export default function Breathwork({ onClose }) {
+export default function Breathwork({ onClose, onSessionComplete }) {
   const [activePattern, setActivePattern] = useState(PATTERNS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [phaseIndex, setPhaseIndex] = useState(0);
@@ -52,7 +52,8 @@ export default function Breathwork({ onClose }) {
   const [instruction, setInstruction] = useState('Ready');
 
   const timerRef = useRef(null);
-  const startTimeRef = useRef(null);
+  const sessionStartRef = useRef(null);
+  const totalDurationRef = useRef(0);
 
   // Reset when pattern changes
   useEffect(() => {
@@ -61,11 +62,22 @@ export default function Breathwork({ onClose }) {
     setInstruction('Ready');
     setScale(0.3);
     if (timerRef.current) clearInterval(timerRef.current);
+    totalDurationRef.current = 0;
   }, [activePattern]);
 
   // Main Loop
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying) {
+        if (sessionStartRef.current) {
+            totalDurationRef.current += Date.now() - sessionStartRef.current;
+            sessionStartRef.current = null;
+        }
+        return;
+    }
+
+    if (!sessionStartRef.current) {
+        sessionStartRef.current = Date.now();
+    }
 
     let phase = activePattern.phases[phaseIndex];
     let start = Date.now();
@@ -99,12 +111,29 @@ export default function Breathwork({ onClose }) {
     return () => clearInterval(timerRef.current);
   }, [isPlaying, phaseIndex, activePattern]);
 
+  const handleFinish = () => {
+      // Calculate final duration
+      let finalDuration = totalDurationRef.current;
+      if (isPlaying && sessionStartRef.current) {
+          finalDuration += Date.now() - sessionStartRef.current;
+      }
+
+      // If session was meaningful (> 30s), log it
+      if (finalDuration > 30000 && onSessionComplete) {
+          const minutes = Math.ceil(finalDuration / 60000);
+          onSessionComplete(minutes, activePattern.label);
+      }
+      onClose();
+  };
+
   const togglePlay = () => setIsPlaying(!isPlaying);
   const reset = () => {
       setIsPlaying(false);
       setPhaseIndex(0);
       setInstruction('Ready');
       setScale(0.3);
+      totalDurationRef.current = 0;
+      sessionStartRef.current = null;
   };
 
   return (
@@ -115,7 +144,7 @@ export default function Breathwork({ onClose }) {
             <Wind size={20} />
             <span className="font-bold">State Shifter</span>
         </div>
-        <button onClick={onClose} className="p-2 bg-zinc-900 rounded-full text-zinc-400 hover:text-white">
+        <button onClick={handleFinish} className="p-2 bg-zinc-900 rounded-full text-zinc-400 hover:text-white">
             <X size={20} />
         </button>
       </div>

@@ -35,6 +35,7 @@ export default function Dashboard({
     if (filter === 'workouts') return entry.type === 'workout';
     if (filter === 'focus') return entry.type === 'work_session';
     if (filter === 'journal') return entry.type === 'journal';
+    if (filter === 'breathwork') return entry.type === 'breathwork';
     return true;
   });
 
@@ -164,7 +165,7 @@ export default function Dashboard({
       <div className="flex items-center justify-between mb-4">
          <h3 className="text-lg font-bold text-white">Timeline</h3>
          <div className="flex bg-zinc-900/50 border border-zinc-800 p-1 rounded-xl overflow-x-auto scrollbar-hide gap-1 max-w-[200px] sm:max-w-none">
-            {['all', 'meals', 'workouts', 'journal', 'focus'].map(f => (
+            {['all', 'meals', 'workouts', 'journal', 'focus', 'breathwork'].map(f => (
                <button
                   key={f}
                   onClick={() => setFilter(f)}

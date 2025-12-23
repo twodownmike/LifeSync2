@@ -10,7 +10,8 @@ export const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
       <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-zinc-950 
         ${entry.type === 'meal' ? 'bg-orange-400' : 
           entry.type === 'workout' ? 'bg-emerald-400' : 
-          entry.type === 'work_session' ? 'bg-cyan-400' : 'bg-violet-400'}`} 
+          entry.type === 'work_session' ? 'bg-cyan-400' : 
+          entry.type === 'breathwork' ? 'bg-sky-400' : 'bg-violet-400'}`} 
       />
       
       <div 
@@ -25,6 +26,11 @@ export const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
                </span>
                {entry.type === 'work_session' && (
                 <span className="inline-block mb-2 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded border border-cyan-500/30">
+                   {entry.duration} mins
+                </span>
+               )}
+               {entry.type === 'breathwork' && (
+                <span className="inline-block mb-2 px-2 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded border border-sky-500/30">
                    {entry.duration} mins
                 </span>
                )}
@@ -45,6 +51,24 @@ export const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
 
         {isExpanded && (
           <div className="mt-3 animate-fade-in border-l-2 border-zinc-800 pl-3 ml-1 mb-6">
+
+             {/* Mood & Energy */}
+             {(entry.mood || entry.energy) && (
+                <div className="flex gap-4 mb-3 bg-zinc-900/30 p-2 rounded-lg border border-zinc-800/50">
+                   {entry.mood && (
+                      <div className="flex items-center gap-2">
+                         <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Mood</div>
+                         <div className="text-sm font-bold text-violet-400">{entry.mood}<span className="text-zinc-600 text-[10px]">/10</span></div>
+                      </div>
+                   )}
+                   {entry.energy && (
+                      <div className="flex items-center gap-2">
+                         <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Energy</div>
+                         <div className="text-sm font-bold text-yellow-500">{entry.energy}<span className="text-zinc-600 text-[10px]">/10</span></div>
+                      </div>
+                   )}
+                </div>
+             )}
 
              {/* Exercises */}
              {entry.exercises && entry.exercises.length > 0 && (
