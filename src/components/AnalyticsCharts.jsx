@@ -155,3 +155,50 @@ export const StatCard = ({ icon: Icon, label, value, subtext, color = "text-emer
       <div className="text-[10px] text-zinc-500">{subtext}</div>
    </div>
 );
+
+export const ActivityHeatmap = ({ entries }) => {
+   const last28Days = useMemo(() => Array.from({length: 28}, (_, i) => {
+       const d = new Date();
+       d.setDate(d.getDate() - (27 - i));
+       return d.toISOString().split('T')[0];
+   }), []);
+ 
+   const activityByDate = useMemo(() => entries.reduce((acc, entry) => {
+       const date = new Date(entry.timestamp).toISOString().split('T')[0];
+       acc[date] = (acc[date] || 0) + 1;
+       return acc;
+   }, {}), [entries]);
+ 
+   return (
+      <div>
+          <div className="grid grid-cols-7 gap-2 mb-2">
+             {['S','M','T','W','T','F','S'].map((d, i) => (
+                <div key={i} className="text-center text-[10px] text-zinc-600 font-bold">{d}</div>
+             ))}
+          </div>
+ 
+          <div className="grid grid-cols-7 gap-2">
+             {/* Padding for first week alignment */}
+             {Array.from({ length: new Date(last28Days[0]).getDay() }).map((_, i) => (
+                <div key={`pad-${i}`} className="aspect-square"></div>
+             ))}
+ 
+             {last28Days.map((dateStr) => {
+                 const count = activityByDate[dateStr] || 0;
+                 let bgClass = 'bg-zinc-800/50';
+                 if (count > 0) bgClass = 'bg-emerald-500/30 border-emerald-500/50';
+                 if (count > 2) bgClass = 'bg-emerald-500/60 border-emerald-500/80';
+                 if (count > 4) bgClass = 'bg-emerald-500 border-emerald-400';
+                 
+                 return (
+                     <div key={dateStr} className={`aspect-square rounded-md border border-transparent transition-all ${bgClass} relative group`}>
+                        <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-zinc-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap border border-zinc-800 pointer-events-none z-10 shadow-xl">
+                           {new Date(dateStr).toLocaleDateString(undefined, {weekday: 'short', month:'short', day:'numeric'})}: {count} entries
+                        </div>
+                     </div>
+                 )
+             })}
+          </div>
+      </div>
+   );
+};

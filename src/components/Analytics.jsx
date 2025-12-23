@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Flame, Clock, Dumbbell, BookOpen, Activity, Zap } from 'lucide-react';
 import { Card } from './UI';
 import { calculateStreak } from '../lib/constants';
-import { ActivityBarChart, FastingTrendChart, StatCard } from './AnalyticsCharts';
+import { ActivityBarChart, FastingTrendChart, StatCard, ActivityHeatmap } from './AnalyticsCharts';
 
 export default function Analytics({ entries }) {
   // --- Data Processing ---
@@ -146,6 +146,15 @@ export default function Analytics({ entries }) {
             Weekly Activity
          </h3>
          <ActivityBarChart data={weeklyActivity} />
+      </Card>
+
+      {/* Consistency Heatmap */}
+      <Card>
+         <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+           <Activity size={18} className="text-zinc-400" />
+           Consistency (Last 28 Days)
+         </h3>
+         <ActivityHeatmap entries={entries} />
       </Card>
     </div>
   );
