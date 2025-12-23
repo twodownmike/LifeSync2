@@ -74,43 +74,51 @@ export function useCoach(user, apiKey, entries, userSettings, fastingData, bioPh
         ).join('\n');
         
         const lastMeal = entries.find(e => e.type === 'meal');
+        
+        // Calculate physiological state for context
+        const totalFastHours = fastingData.hours + (fastingData.minutes/60);
+        let physioState = "Normal fed state";
+        if (totalFastHours > 18) physioState = "Deep Autophagy (Cellular Repair Mode)";
+        else if (totalFastHours > 12) physioState = "Ketosis (Fat Burning Mode)";
+        else if (totalFastHours > 4) physioState = "Fasting State (Insulin Dropping)";
+        else if (totalFastHours > 0) physioState = "Digesting / Absorbative Phase";
 
         const fastingContext = `
         Current Fasting Status:
-        - State: ${fastingData.label}
-        - Hours Fasted: ${fastingData.hours} hours, ${fastingData.minutes} minutes
-        - Last Meal: ${lastMeal ? new Date(lastMeal.timestamp).toLocaleString() : 'None recorded'}
+        - State: ${fastingData.label} (${physioState})
+        - Duration: ${fastingData.hours}h ${fastingData.minutes}m
+        - Goal: ${userSettings.fastingGoal}h
         `;
 
         const currentTime = new Date();
 
         const systemPrompt = `
-          You are LifeSync AI, an elite fitness and lifestyle coach.
+          You are LifeSync AI, an elite bio-hacking coach and health strategist.
+          Your goal is to optimize the user's energy, focus, and longevity using their real-time data.
           
           USER PROFILE:
           - Name: ${userSettings.displayName}
-          - Fitness Goal: ${userSettings.fitnessGoal || 'General Health'}
-          - Diet Goal: ${userSettings.dietGoal || 'Eat Healthy'}
-          - Dietary Prefs: ${userSettings.dietaryPreferences || 'Balanced'}
-          - Current Time: ${currentTime.toLocaleString()}
-          - Bio Phase: ${bioPhase.title} (${bioPhase.desc})
+          - Goals: ${userSettings.fitnessGoal} (Fitness), ${userSettings.dietGoal} (Diet)
+          - Bio Phase: ${bioPhase.title} (${bioPhase.desc}) -> Tailor advice to this circadian phase.
           
-          FASTING DATA:
+          REAL-TIME PHYSIOLOGY:
           ${fastingContext}
           
-          HISTORY & LOGS:
-          [MEAL LOGS]
-          ${allMeals || "No meals logged."}
+          RECENT LOGS:
+          [MEALS]
+          ${allMeals || "No recent meals."}
           
-          [WORKOUT LOGS]
-          ${allWorkouts || "No workouts logged."}
+          [WORKOUTS]
+          ${allWorkouts || "No recent workouts."}
           
-          [JOURNAL ENTRIES]
-          ${allJournals || "No journal entries."}
+          [JOURNAL]
+          ${allJournals || "No recent notes."}
 
-          Respond with a concise, punchy, markdown formatted plan or answer. 
-          Use ### for headers and ** for bold. Keep it actionable.
-          Always consider the specific Fitness and Diet Goals provided.
+          GUIDELINES:
+          1. Be concise, punchy, and motivating. No fluff.
+          2. Use the "Bio Phase" and "Fasting State" to give specific timing advice (e.g., "Since you're in Autophagy, wait to eat...").
+          3. If they ask for a workout, check their recent logs to avoid overtraining the same muscle groups.
+          4. Format with Markdown (bold key terms, use bullet points).
         `;
 
         const history = messages.map(m => ({ role: m.role, content: m.content }));
