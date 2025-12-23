@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
 import { ACHIEVEMENTS } from '../lib/constants';
+import { useNotifications } from './useNotifications';
 
 export function useAchievements(entries, userSettings, updateSettings) {
+  const { sendNotification } = useNotifications();
+
   useEffect(() => {
     if (!entries || !userSettings || !updateSettings) return;
 
@@ -40,6 +43,16 @@ export function useAchievements(entries, userSettings, updateSettings) {
 
         if (isUnlocked) {
             newUnlocks.push(achievement.id);
+            
+            // Notify user immediately
+            sendNotification(`🏆 Achievement Unlocked: ${achievement.title}`, {
+                body: achievement.desc,
+                icon: '/vite.svg'
+            });
+
+            // Optional: Play sound
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'); // Success chime
+            audio.play().catch(e => console.log("Audio play failed", e));
         }
       });
 
@@ -50,9 +63,6 @@ export function useAchievements(entries, userSettings, updateSettings) {
             ...userSettings, 
             unlockedAchievements: updatedList 
         });
-        
-        // Optional: Trigger a toast or sound here?
-        // For now we just save it.
       }
     };
 
