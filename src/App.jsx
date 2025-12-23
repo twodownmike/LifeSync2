@@ -46,7 +46,8 @@ import {
   RefreshCw,
   ListChecks,
   CheckCircle,
-  Circle
+  Circle,
+  BarChart2
 } from 'lucide-react';
 
 // --- Firebase Imports ---
@@ -91,27 +92,6 @@ const appId = 'lifesync-91884';
 
 // --- Constants & Data ---
 
-const MANTRAS = [
-  "This is hard, but that’s what makes it rewarding.",
-  "This is what hard feels like. This is where most people quit.",
-  "The faster I do the hard thing, the faster I get the good thing.",
-  "Effort is the reward.",
-  "Every time you try, you’ve already won."
-];
-
-const PRINCIPLES = [
-  { title: "1. Defaults to Ease", text: "A depleted brain defaults to ease. Fast dopamine (scrolling, junk food) drains you below baseline. Reduce it so your brain has the motivation it needs." },
-  { title: "2. Reappraise Discomfort", text: "Discomfort is the price of admission. It's not a sign to stop. Tell yourself: 'This is hard, but that’s what makes it rewarding.'" },
-  { title: "3. Win the Evening", text: "Your morning success is created the night before. Avoid fast dopamine in the evening so you don’t wake up depleted." },
-  { title: "4. Structure Your Day", text: "Phase 1 (0-8h): Deep Work (High Dopamine). Phase 2 (9-16h): Creative/Social (High Serotonin). Phase 3 (17-24h): Wind-down." },
-  { title: "5. Identity Requires Evidence", text: "You don’t 'become' someone who does hard things—you prove it to yourself through action. Cast votes for your identity daily." },
-  { title: "6. Never Miss Twice", text: "Missing a day is normal. Missing twice creates a new pattern. Always return the next day." },
-  { title: "7. The 5% Rule", text: "Intimidated? Shrink the task to where your willingness begins. Just put on gym clothes. Just open the notes." },
-  { title: "8. Ritualize It", text: "Create a small action that signals your brain it’s time to start. Tea before studying. Cleaning desk before deep work." },
-  { title: "9. Sustainable Pace", text: "Slow, sustainable consistency beats big bursts. A 30-minute daily habit beats one giant weekly effort." },
-  { title: "10. Discipline Paradox", text: "Effort and reward are not separate. The reward comes from the effort. Every time you try, you’ve already won." },
-  { title: "11. Self-Negotiation", text: "Don't suppress the urge to quit—negotiate with it. Label the need, explore it, and find a compromise." }
-];
 
 const ACHIEVEMENTS = [
   {
@@ -120,7 +100,6 @@ const ACHIEVEMENTS = [
     desc: 'Log your first entry of any kind.',
     icon: Star,
     tier: 'bronze',
-    check: (entries, fastHrs, detoxHrs) => entries.length > 0
   },
   {
     id: 'early_bird',
@@ -129,14 +108,6 @@ const ACHIEVEMENTS = [
     icon: Sunrise,
     tier: 'bronze',
     check: (entries) => entries.some(e => e.type === 'workout' && new Date(e.timestamp).getHours() < 8 && new Date(e.timestamp).getHours() > 3)
-  },
-  {
-    id: 'monk_mode',
-    title: 'Monk Mode',
-    desc: 'Complete a 1-hour dopamine detox.',
-    icon: Brain,
-    tier: 'bronze',
-    check: (entries) => entries.some(e => e.type === 'detox' && e.duration >= 60)
   },
   {
     id: 'fasting_initiate',
@@ -161,14 +132,6 @@ const ACHIEVEMENTS = [
     icon: Dumbbell,
     tier: 'silver',
     check: (entries) => entries.filter(e => e.type === 'workout').length >= 10
-  },
-  {
-    id: 'digital_ghost',
-    title: 'Digital Ghost',
-    desc: 'Complete a 4-hour detox session.',
-    icon: Smartphone,
-    tier: 'gold',
-    check: (entries) => entries.some(e => e.type === 'detox' && e.duration >= 240)
   },
   {
     id: 'fasting_master',
@@ -256,8 +219,7 @@ const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
       {/* Dot */}
       <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-zinc-950 
         ${entry.type === 'meal' ? 'bg-orange-400' : 
-          entry.type === 'workout' ? 'bg-emerald-400' : 
-          entry.type === 'detox' ? 'bg-cyan-400' : 'bg-violet-400'}`} 
+          entry.type === 'workout' ? 'bg-emerald-400' : 'bg-violet-400'}`} 
       />
       
       <div 
@@ -287,12 +249,6 @@ const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
 
         {isExpanded && (
           <div className="mt-3 animate-fade-in border-l-2 border-zinc-800 pl-3 ml-1 mb-6">
-             {/* Detox Duration */}
-             {entry.type === 'detox' && (
-                <span className="inline-block mb-2 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded border border-cyan-500/30">
-                   {entry.duration} mins
-                </span>
-             )}
 
              {/* Exercises */}
              {entry.exercises && entry.exercises.length > 0 && (
@@ -406,13 +362,12 @@ export default function LifeSync() {
   const [isTypeSelectorOpen, setIsTypeSelectorOpen] = useState(false); 
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false); 
-  const [isManifestoOpen, setIsManifestoOpen] = useState(false); 
+ 
   const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false); // New
   const [modalType, setModalType] = useState(null); 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isSaving, setIsSaving] = useState(false);
   const [newUnlock, setNewUnlock] = useState(null); 
-  const [currentMantra, setCurrentMantra] = useState(MANTRAS[0]);
   
   // AI Coach State
   const [coachLoading, setCoachLoading] = useState(false);
@@ -438,10 +393,6 @@ export default function LifeSync() {
   const [routineType, setRoutineType] = useState('mindset');
   const [routineDays, setRoutineDays] = useState([]); // Array of day indexes 0-6
 
-  // Manual Detox State
-  const [manualDetoxStart, setManualDetoxStart] = useState('');
-  const [manualDetoxEnd, setManualDetoxEnd] = useState('');
-  const [manualDetoxNote, setManualDetoxNote] = useState('');
 
   // --- Authentication & Initial Setup ---
 
@@ -558,12 +509,6 @@ export default function LifeSync() {
     return () => clearInterval(timer);
   }, []);
     
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentMantra(MANTRAS[Math.floor(Math.random() * MANTRAS.length)]);
-    }, 30000); 
-    return () => clearInterval(timer);
-  }, []);
 
   // --- Derived Logic Helpers ---
 
@@ -594,19 +539,6 @@ export default function LifeSync() {
     return { hours: diffHrs, minutes: diffMins, seconds: diffSecs, progress, label };
   }, [lastMeal, currentTime, userSettings.fastingGoal]);
 
-  const detoxData = useMemo(() => {
-    if (!userSettings.activeDetox) return null;
-      
-    const startTime = new Date(userSettings.activeDetox.startTime);
-    const diffMs = currentTime - startTime;
-    const safeDiffMs = Math.max(0, diffMs);
-
-    const diffHrs = Math.floor(safeDiffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((safeDiffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const diffSecs = Math.floor((safeDiffMs % (1000 * 60)) / 1000);
-
-    return { hours: diffHrs, minutes: diffMins, seconds: diffSecs };
-  }, [userSettings.activeDetox, currentTime]);
 
   const bioPhase = useMemo(() => {
     const hour = currentTime.getHours();
@@ -746,83 +678,6 @@ export default function LifeSync() {
     setExercises(exercises.filter(e => e.id !== id));
   };
 
-  const handleStartDetox = async (detoxType) => {
-    if (!user) return;
-    const newSettings = { 
-      ...userSettings, 
-      activeDetox: { 
-        type: detoxType, 
-        startTime: new Date().toISOString() 
-      } 
-    };
-    setUserSettings(newSettings);
-    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'profile'), newSettings);
-  };
-
-  const handleEndDetox = async () => {
-    if (!user || !userSettings.activeDetox) return;
-    setIsSaving(true);
-
-    try {
-      const startTime = new Date(userSettings.activeDetox.startTime);
-      const endTime = new Date();
-      const durationMinutes = Math.floor((endTime - startTime) / (1000 * 60));
-
-      if (durationMinutes >= 1) { // Only log if at least 1 minute
-        const newEntry = {
-          type: 'detox',
-          title: `${userSettings.activeDetox.type} Detox`,
-          note: `Completed a session of ${durationMinutes} minutes.`,
-          tags: ['mindfulness', 'detox'],
-          duration: durationMinutes,
-          timestamp: endTime.toISOString(),
-        };
-        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'entries'), newEntry);
-      }
-
-      const newSettings = { ...userSettings, activeDetox: null };
-      setUserSettings(newSettings);
-      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'profile'), newSettings);
-
-    } catch (err) {
-      console.error("Error ending detox:", err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleManualDetoxLog = async () => {
-    if (!user || !manualDetoxStart || !manualDetoxEnd) return;
-    setIsSaving(true);
-    try {
-        const start = new Date(manualDetoxStart);
-        const end = new Date(manualDetoxEnd);
-        const durationMinutes = Math.floor((end - start) / (1000 * 60));
-
-        if (durationMinutes < 1) {
-            alert("End time must be after start time.");
-            return;
-        }
-
-        const newEntry = {
-          type: 'detox',
-          title: 'Manual Detox Log',
-          note: manualDetoxNote,
-          tags: ['mindfulness', 'detox', 'manual'],
-          duration: durationMinutes,
-          timestamp: end.toISOString(),
-        };
-        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'entries'), newEntry);
-        setManualDetoxStart('');
-        setManualDetoxEnd('');
-        setManualDetoxNote('');
-        alert("Detox session logged!");
-    } catch (err) {
-        console.error("Error logging manual detox:", err);
-    } finally {
-        setIsSaving(false);
-    }
-  };
 
   const handleDelete = async (id) => {
     if (!user) return;
@@ -947,7 +802,6 @@ export default function LifeSync() {
         - Last Meal: ${lastMeal ? new Date(lastMeal.timestamp).toLocaleString() : 'None recorded'}
         `;
 
-        const protocolContext = PRINCIPLES.map(p => `- ${p.title}: ${p.text}`).join('\n');
 
         const systemPrompt = `
           You are LifeSync AI, an elite fitness and lifestyle coach.
@@ -960,9 +814,6 @@ export default function LifeSync() {
           - Current Time: ${currentTime.toLocaleString()}
           - Bio Phase: ${bioPhase.title} (${bioPhase.desc})
           
-          DOPAMINE PROTOCOL PRINCIPLES:
-          ${protocolContext}
-
           FASTING DATA:
           ${fastingContext}
           
@@ -1482,176 +1333,117 @@ export default function LifeSync() {
     );
   };
 
-  const renderDetox = () => {
-     const isActive = !!userSettings.activeDetox;
 
-     if (isActive) {
-       return (
-         <div className="flex flex-col items-center justify-center min-h-[70vh] pb-24 animate-fade-in space-y-12">
-            <div className="relative w-72 h-72 flex items-center justify-center">
-              {/* Outer Glow */}
-              <div className="absolute inset-0 rounded-full bg-cyan-500/10 blur-3xl animate-pulse"></div>
-              
-              <div className="absolute inset-0 rounded-full border-8 border-zinc-900 shadow-2xl"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-cyan-500/30 animate-ping opacity-20"></div>
-              
-              <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_25px_rgba(6,182,212,0.5)]">
-                <circle
-                  cx="144"
-                  cy="144"
-                  r="130"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="transparent"
-                  className="text-cyan-400"
-                  strokeDasharray={2 * Math.PI * 130}
-                  strokeDashoffset={0}
-                  strokeLinecap="round"
-                />
-              </svg>
-              
-              <div className="text-center z-10 flex flex-col items-center">
-                <div className="text-cyan-400 text-xs font-bold uppercase tracking-widest mb-3 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">Focus Mode</div>
-                <div className="text-6xl font-bold text-white font-mono tracking-tighter flex items-baseline filter drop-shadow-lg">
-                  <span>{detoxData?.hours}</span>
-                  <span className="mx-1 text-cyan-500/50">:</span>
-                  <span>{detoxData?.minutes.toString().padStart(2, '0')}</span>
-                </div>
-                <div className="text-2xl font-mono text-zinc-500 mt-1 font-bold">
-                   {detoxData?.seconds.toString().padStart(2, '0')}
-                </div>
+  const renderAnalytics = () => {
+    // Calculate stats
+    const workoutCount = entries.filter(e => e.type === 'workout').length;
+    const journalCount = entries.filter(e => e.type === 'journal').length;
+    
+    // Avg Fasting
+    let totalFastHrs = 0;
+    let fastCount = 0;
+    // Entries are sorted newest first. 
+    // We look for a meal, then find the previous meal (which is later in the array) to calc duration.
+    for (let i = 0; i < entries.length - 1; i++) {
+        if (entries[i].type === 'meal') {
+            const prevMeal = entries.slice(i + 1).find(e => e.type === 'meal');
+            if (prevMeal) {
+                const diffMs = new Date(entries[i].timestamp) - new Date(prevMeal.timestamp);
+                const hours = diffMs / (1000 * 60 * 60);
+                if (hours > 0 && hours < 100) { // filter outliers
+                    totalFastHrs += hours;
+                    fastCount++;
+                }
+            }
+        }
+    }
+    const avgFast = fastCount > 0 ? (totalFastHrs / fastCount).toFixed(1) : 0;
+    
+    // Streak
+    const streak = calculateStreak(entries);
+
+    // Heatmap Data (Last 28 days)
+    const today = new Date();
+    // Generate last 28 days (4 weeks)
+    const last28Days = Array.from({length: 28}, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (27 - i));
+        return d.toISOString().split('T')[0];
+    });
+
+    const activityByDate = entries.reduce((acc, entry) => {
+        const date = new Date(entry.timestamp).toISOString().split('T')[0];
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+    }, {});
+
+    return (
+      <div className="space-y-6 pb-24 animate-fade-in">
+        <h2 className="text-2xl font-bold text-white mb-6">Analytics</h2>
+        
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4">
+           <Card className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                 <Flame size={14} className="text-orange-500" /> Streak
               </div>
-            </div>
-
-            <div className="w-full max-w-sm space-y-8 px-4">
-              <div className="text-center">
-                <p className="text-zinc-400 text-sm font-medium italic animate-pulse leading-relaxed">
-                  "{currentMantra}"
-                </p>
+              <div className="text-3xl font-bold text-white font-mono">{streak}</div>
+              <div className="text-xs text-zinc-500">Current Day Streak</div>
+           </Card>
+           
+           <Card className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                 <Clock size={14} className="text-emerald-500" /> Fasting
               </div>
+              <div className="text-3xl font-bold text-white font-mono">{avgFast}<span className="text-sm text-zinc-500 ml-1">h</span></div>
+              <div className="text-xs text-zinc-500">Avg. Fast Duration</div>
+           </Card>
 
-              <Button variant="danger" onClick={handleEndDetox} className="w-full py-4 text-lg font-bold border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)] hover:shadow-[0_0_40px_rgba(239,68,68,0.4)] transition-all">
-                End Session
-              </Button>
-            </div>
-         </div>
-       )
-     }
-
-     return (
-       <div className="flex flex-col pb-32 animate-fade-in space-y-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-cyan-500/10 rounded-full text-cyan-400 border border-cyan-500/20">
-              <Brain size={24} />
-            </div>
-            <h2 className="text-2xl font-bold text-white">Dopamine Detox</h2>
-          </div>
-          
-          {/* Live Detox Card */}
-          <button 
-            onClick={() => handleStartDetox('Total')} 
-            className="relative w-full overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 p-6 rounded-3xl hover:border-cyan-500/50 transition-all group text-left shadow-xl"
-          >
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-500 transform group-hover:scale-110 origin-top-right">
-                <Zap size={120} className="text-cyan-500" />
-             </div>
-             
-             <div className="relative z-10 flex flex-col gap-4">
-                <div className="inline-flex items-center gap-2 bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full w-fit border border-cyan-500/20">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-                    <span className="text-xs font-bold uppercase tracking-wide">Start Now</span>
-                </div>
-                
-                <div>
-                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-cyan-100 transition-colors">Total Detox</h3>
-                    <p className="text-zinc-400 text-sm leading-relaxed max-w-[80%]">
-                      Enter a state of deep focus. Block cheap dopamine sources to reset your baseline.
-                    </p>
-                </div>
-             </div>
-          </button>
-
-          {/* Manual Log Card */}
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl space-y-5 shadow-sm">
-             <div className="flex items-center gap-2 text-zinc-200 font-bold">
-                <Clock size={18} className="text-zinc-500" />
-                <h3>Log Past Session</h3>
-             </div>
-             
-             <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider pl-1">Started</label>
-                        <input 
-                            type="datetime-local" 
-                            value={manualDetoxStart}
-                            onChange={(e) => setManualDetoxStart(e.target.value)}
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider pl-1">Ended</label>
-                        <input 
-                            type="datetime-local" 
-                            value={manualDetoxEnd}
-                            onChange={(e) => setManualDetoxEnd(e.target.value)}
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                        />
-                    </div>
-                </div>
-                
-                <div className="space-y-1.5">
-                    <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider pl-1">Notes</label>
-                    <textarea 
-                        rows="2"
-                        placeholder="How did it feel? What did you do instead?"
-                        value={manualDetoxNote}
-                        onChange={(e) => setManualDetoxNote(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none transition-colors"
-                    />
-                </div>
-
-                <Button 
-                    onClick={handleManualDetoxLog} 
-                    disabled={!manualDetoxStart || !manualDetoxEnd || isSaving}
-                    variant="cyan"
-                    className="w-full py-3 text-sm font-bold shadow-lg shadow-cyan-500/10"
-                >
-                    Log Session
-                </Button>
-             </div>
-          </div>
-
-          {/* Protocol Link */}
-          <div 
-            onClick={() => setIsManifestoOpen(true)}
-            className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-zinc-800 hover:border-zinc-700 transition-all group"
-          >
-              <div className="p-3 bg-zinc-950 rounded-xl text-cyan-400 group-hover:scale-105 transition-transform border border-zinc-800">
-                <Scroll size={20} />
+           <Card className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                 <Dumbbell size={14} className="text-cyan-500" /> Workouts
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-zinc-200 group-hover:text-white transition-colors">Dopamine Protocol</h3>
-                <p className="text-xs text-zinc-500">Read the 11 rules for mental clarity</p>
-              </div>
-              <ChevronRight className="text-zinc-600 group-hover:text-white group-hover:translate-x-1 transition-all" size={18} />
-          </div>
+              <div className="text-3xl font-bold text-white font-mono">{workoutCount}</div>
+              <div className="text-xs text-zinc-500">Total Sessions</div>
+           </Card>
 
-          {/* Educational Card */}
-          <div className="bg-gradient-to-br from-cyan-950/30 to-zinc-900 border border-cyan-500/20 p-6 rounded-3xl relative overflow-hidden">
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-3">
-                  <Shield className="text-cyan-400" size={18} />
-                  <h3 className="font-bold text-cyan-100 text-sm uppercase tracking-wide">Why Detox?</h3>
-                </div>
-                <p className="text-zinc-400 text-sm leading-relaxed">
-                  Constant stimulation reduces your brain's sensitivity to dopamine. Taking a break resets your baseline, making hard things feel easier.
-                </p>
+           <Card className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                 <BookOpen size={14} className="text-violet-500" /> Journals
               </div>
-          </div>
-       </div>
-     )
-  }
+              <div className="text-3xl font-bold text-white font-mono">{journalCount}</div>
+              <div className="text-xs text-zinc-500">Entries Logged</div>
+           </Card>
+        </div>
+
+        {/* Consistency Heatmap */}
+        <Card>
+           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+             <Activity size={18} className="text-zinc-400" />
+             Consistency (Last 28 Days)
+           </h3>
+           <div className="grid grid-cols-7 gap-2">
+              {last28Days.map((dateStr, i) => {
+                  const count = activityByDate[dateStr] || 0;
+                  // Color scale based on count
+                  let bgClass = 'bg-zinc-800/50';
+                  if (count > 0) bgClass = 'bg-emerald-500/30 border-emerald-500/50';
+                  if (count > 2) bgClass = 'bg-emerald-500/60 border-emerald-500/80';
+                  if (count > 4) bgClass = 'bg-emerald-500 border-emerald-400';
+                  
+                  return (
+                      <div key={dateStr} className={`aspect-square rounded-md border border-transparent transition-all ${bgClass} relative group`}>
+                         <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-zinc-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap border border-zinc-800 pointer-events-none z-10 shadow-xl">
+                            {new Date(dateStr).toLocaleDateString(undefined, {month:'short', day:'numeric'})}: {count} entries
+                         </div>
+                      </div>
+                  )
+              })}
+           </div>
+        </Card>
+      </div>
+    );
+  };
 
   const renderProfile = () => (
     <div className="space-y-6 pb-24 animate-fade-in">
@@ -1797,50 +1589,6 @@ export default function LifeSync() {
 
   // --- Modals ---
 
-  const renderManifestoModal = () => {
-    if (!isManifestoOpen) return null;
-
-    return (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/95 p-4 animate-fade-in">
-        <div className="w-full max-w-md h-[85vh] flex flex-col bg-zinc-950 rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden">
-          <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-950/90 sticky top-0 z-10">
-             <div className="flex items-center gap-3">
-                <Scroll className="text-cyan-400" size={24} />
-                <h2 className="text-xl font-bold text-white">The Protocol</h2>
-             </div>
-             <button onClick={() => setIsManifestoOpen(false)} className="p-2 text-zinc-500 hover:text-white rounded-full hover:bg-zinc-800 transition-colors">
-               <X size={24} />
-             </button>
-          </div>
-          
-          <div className="overflow-y-auto p-6 space-y-8">
-             <div className="text-sm text-zinc-400 italic mb-6 border-l-2 border-cyan-500 pl-4">
-               "The faster I do the hard thing, the faster I get the good thing."
-             </div>
-             
-             {PRINCIPLES.map((p, i) => (
-               <div key={i} className="group">
-                 <h3 className="text-cyan-100 font-bold text-lg mb-2 group-hover:text-cyan-400 transition-colors">{p.title}</h3>
-                 <p className="text-zinc-400 text-sm leading-relaxed">{p.text}</p>
-               </div>
-             ))}
-
-             <div className="pt-8 border-t border-zinc-800">
-               <h3 className="text-white font-bold text-lg mb-2">Bottom Line</h3>
-               <ul className="list-disc list-inside text-zinc-400 text-sm space-y-1">
-                 <li>Rebalance your dopamine.</li>
-                 <li>Reduce fast dopamine.</li>
-                 <li>Embrace slow dopamine (hard things).</li>
-                 <li>Do the hard things—because the effort is the reward.</li>
-               </ul>
-             </div>
-             
-             <div className="h-12"></div>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   const renderGoalModal = () => {
     if (!isGoalModalOpen) return null;
@@ -2183,7 +1931,7 @@ export default function LifeSync() {
           {activeTab === 'home' && renderTimeline()}
           {activeTab === 'fasting' && renderFasting()}
           {activeTab === 'coach' && renderCoach()}
-          {activeTab === 'detox' && renderDetox()}
+          {activeTab === 'analytics' && renderAnalytics()}
           {activeTab === 'routine' && renderRoutine()}
           {activeTab === 'profile' && renderProfile()}
         </div>
@@ -2233,11 +1981,11 @@ export default function LifeSync() {
               {/* Right Side */}
               <div className="flex items-center justify-around flex-1">
                 <button 
-                  onClick={() => setActiveTab('detox')}
-                  className={`flex flex-col items-center gap-1 min-w-[40px] transition-colors ${activeTab === 'detox' ? 'text-cyan-400' : 'text-zinc-600'}`}
+                  onClick={() => setActiveTab('analytics')}
+                  className={`flex flex-col items-center gap-1 min-w-[40px] transition-colors ${activeTab === 'analytics' ? 'text-cyan-400' : 'text-zinc-600'}`}
                 >
-                  <Brain size={20} />
-                  <span className="text-[9px] font-medium">Detox</span>
+                  <BarChart2 size={20} />
+                  <span className="text-[9px] font-medium">Stats</span>
                 </button>
 
                 <button 
@@ -2267,7 +2015,6 @@ export default function LifeSync() {
       {renderAddModal()}
       {renderInfoModal()}
       {renderGoalModal()}
-      {renderManifestoModal()}
       
       <style jsx global>{`
         @keyframes slide-up {
