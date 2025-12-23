@@ -8,9 +8,11 @@ export default function Analytics({ entries }) {
   const workoutCount = entries.filter(e => e.type === 'workout').length;
   const journalCount = entries.filter(e => e.type === 'journal').length;
   
-  // Avg Fasting
+  // Avg Fasting & Longest Fast
   let totalFastHrs = 0;
   let fastCount = 0;
+  let longestFast = 0;
+
   // Entries are sorted newest first. 
   // We look for a meal, then find the previous meal (which is later in the array) to calc duration.
   for (let i = 0; i < entries.length - 1; i++) {
@@ -22,17 +24,23 @@ export default function Analytics({ entries }) {
               if (hours > 0 && hours < 100) { // filter outliers
                   totalFastHrs += hours;
                   fastCount++;
+                  if (hours > longestFast) longestFast = hours;
               }
           }
       }
   }
   const avgFast = fastCount > 0 ? (totalFastHrs / fastCount).toFixed(1) : 0;
   
+  // Focus Stats
+  const focusEntries = entries.filter(e => e.type === 'work_session');
+  const totalFocusMinutes = focusEntries.reduce((acc, curr) => acc + (parseInt(curr.duration) || 0), 0);
+  const totalFocusHours = (totalFocusMinutes / 60).toFixed(1);
+
   // Streak
   const streak = calculateStreak(entries);
 
   // Heatmap Data (Last 28 days)
-  // Generate last 28 days (4 weeks)
+  // ... (keep existing heatmap code) ...
   const last28Days = Array.from({length: 28}, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (27 - i));
@@ -50,7 +58,7 @@ export default function Analytics({ entries }) {
       <h2 className="text-2xl font-bold text-white mb-6">Analytics</h2>
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
          <Card className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
                <Flame size={14} className="text-orange-500" /> Streak
@@ -61,10 +69,18 @@ export default function Analytics({ entries }) {
          
          <Card className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
-               <Clock size={14} className="text-emerald-500" /> Fasting
+               <Clock size={14} className="text-emerald-500" /> Avg Fast
             </div>
             <div className="text-3xl font-bold text-white font-mono">{avgFast}<span className="text-sm text-zinc-500 ml-1">h</span></div>
-            <div className="text-xs text-zinc-500">Avg. Fast Duration</div>
+            <div className="text-xs text-zinc-500">Average Duration</div>
+         </Card>
+
+         <Card className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+               <Activity size={14} className="text-emerald-400" /> Longest Fast
+            </div>
+            <div className="text-3xl font-bold text-white font-mono">{longestFast.toFixed(1)}<span className="text-sm text-zinc-500 ml-1">h</span></div>
+            <div className="text-xs text-zinc-500">Personal Best</div>
          </Card>
 
          <Card className="flex flex-col gap-1">
@@ -81,6 +97,14 @@ export default function Analytics({ entries }) {
             </div>
             <div className="text-3xl font-bold text-white font-mono">{journalCount}</div>
             <div className="text-xs text-zinc-500">Entries Logged</div>
+         </Card>
+
+         <Card className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+               <Activity size={14} className="text-pink-500" /> Deep Work
+            </div>
+            <div className="text-3xl font-bold text-white font-mono">{totalFocusHours}<span className="text-sm text-zinc-500 ml-1">h</span></div>
+            <div className="text-xs text-zinc-500">Total Focus Time</div>
          </Card>
       </div>
 

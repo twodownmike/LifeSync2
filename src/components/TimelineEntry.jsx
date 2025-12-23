@@ -21,7 +21,7 @@ export const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
            <div className="flex-1 pr-4">
              <div className="flex items-center gap-2 mb-1">
                <span className="text-xs font-mono text-zinc-500">
-                 {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                 {new Date(entry.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                </span>
                {entry.type === 'work_session' && (
                 <span className="inline-block mb-2 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded border border-cyan-500/30">
