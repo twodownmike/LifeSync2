@@ -120,7 +120,7 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
       
       {/* Timer Ring Section */}
       <div className="relative w-72 h-72 flex items-center justify-center mb-8 flex-shrink-0">
-        <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+        <svg viewBox="0 0 256 256" className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(16,185,129,0.1)]">
           {/* Background Track (Dark) */}
           <circle
              cx="128" cy="128" r={radius}
