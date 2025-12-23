@@ -1,149 +1,151 @@
-import React from 'react';
-import { Flame, Clock, Dumbbell, BookOpen, Activity } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Flame, Clock, Dumbbell, BookOpen, Activity, Zap } from 'lucide-react';
 import { Card } from './UI';
 import { calculateStreak } from '../lib/constants';
+import { ActivityBarChart, FastingTrendChart, StatCard } from './AnalyticsCharts';
 
 export default function Analytics({ entries }) {
-  // Calculate stats
+  // --- Data Processing ---
+  
+  // 1. General Counts
   const workoutCount = entries.filter(e => e.type === 'workout').length;
   const journalCount = entries.filter(e => e.type === 'journal').length;
   
-  // Avg Fasting & Longest Fast
-  let totalFastHrs = 0;
-  let fastCount = 0;
-  let longestFast = 0;
+  // 2. Fasting Analysis
+  const fastingAnalysis = useMemo(() => {
+    let totalFastHrs = 0;
+    let fastCount = 0;
+    let longestFast = 0;
+    const trends = []; // { date, value }
 
-  // Entries are sorted newest first. 
-  // We look for a meal, then find the previous meal (which is later in the array) to calc duration.
-  for (let i = 0; i < entries.length - 1; i++) {
-      if (entries[i].type === 'meal') {
-          const prevMeal = entries.slice(i + 1).find(e => e.type === 'meal');
-          if (prevMeal) {
-              const diffMs = new Date(entries[i].timestamp) - new Date(prevMeal.timestamp);
-              const hours = diffMs / (1000 * 60 * 60);
-              if (hours > 0 && hours < 100) { // filter outliers
-                  totalFastHrs += hours;
-                  fastCount++;
-                  if (hours > longestFast) longestFast = hours;
-              }
-          }
-      }
-  }
-  const avgFast = fastCount > 0 ? (totalFastHrs / fastCount).toFixed(1) : 0;
-  
-  // Focus Stats
-  const focusEntries = entries.filter(e => e.type === 'work_session');
-  const totalFocusMinutes = focusEntries.reduce((acc, curr) => acc + (parseInt(curr.duration) || 0), 0);
-  const totalFocusHours = (totalFocusMinutes / 60).toFixed(1);
+    // Entries are sorted newest first
+    for (let i = 0; i < entries.length - 1; i++) {
+        if (entries[i].type === 'meal') {
+            const prevMeal = entries.slice(i + 1).find(e => e.type === 'meal');
+            if (prevMeal) {
+                const diffMs = new Date(entries[i].timestamp) - new Date(prevMeal.timestamp);
+                const hours = diffMs / (1000 * 60 * 60);
+                
+                if (hours > 0 && hours < 100) { 
+                    totalFastHrs += hours;
+                    fastCount++;
+                    if (hours > longestFast) longestFast = hours;
+                    
+                    // Capture for trend chart (limit to last 14 fasts for readability)
+                    if (trends.length < 14) {
+                        const d = new Date(entries[i].timestamp);
+                        trends.unshift({ 
+                            label: `${d.getMonth()+1}/${d.getDate()}`, 
+                            value: parseFloat(hours.toFixed(1)),
+                            date: d.toLocaleDateString()
+                        });
+                    }
+                }
+            }
+        }
+    }
 
-  // Streak
+    return {
+        avg: fastCount > 0 ? (totalFastHrs / fastCount).toFixed(1) : 0,
+        longest: longestFast,
+        trends
+    };
+  }, [entries]);
+
+  // 3. Focus Stats
+  const focusStats = useMemo(() => {
+    const focusEntries = entries.filter(e => e.type === 'work_session');
+    const totalMinutes = focusEntries.reduce((acc, curr) => acc + (parseInt(curr.duration) || 0), 0);
+    return (totalMinutes / 60).toFixed(1);
+  }, [entries]);
+
+  // 4. Weekly Activity Breakdown (Last 7 Days)
+  const weeklyActivity = useMemo(() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+        
+        // Filter entries for this day
+        const dayEntries = entries.filter(e => e.timestamp.startsWith(dateStr));
+        
+        days.push({
+            label: dayLabel,
+            meals: dayEntries.filter(e => e.type === 'meal').length,
+            workouts: dayEntries.filter(e => e.type === 'workout').length,
+            focus: dayEntries.filter(e => e.type === 'work_session').length
+        });
+    }
+    return days;
+  }, [entries]);
+
   const streak = calculateStreak(entries);
-
-  // Heatmap Data (Last 28 days)
-  // ... (keep existing heatmap code) ...
-  const last28Days = Array.from({length: 28}, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (27 - i));
-      return d.toISOString().split('T')[0];
-  });
-
-  const activityByDate = entries.reduce((acc, entry) => {
-      const date = new Date(entry.timestamp).toISOString().split('T')[0];
-      acc[date] = (acc[date] || 0) + 1;
-      return acc;
-  }, {});
 
   return (
     <div className="space-y-6 pb-24 animate-fade-in">
-      <h2 className="text-2xl font-bold text-white mb-6">Analytics</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-2xl font-bold text-white">Analytics</h2>
+        <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800">
+             <Flame size={14} className="text-orange-500 fill-orange-500/20" />
+             <span className="text-sm font-bold text-white">{streak} Day Streak</span>
+        </div>
+      </div>
       
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-         <Card className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
-               <Flame size={14} className="text-orange-500" /> Streak
-            </div>
-            <div className="text-3xl font-bold text-white font-mono">{streak}</div>
-            <div className="text-xs text-zinc-500">Current Day Streak</div>
-         </Card>
-         
-         <Card className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
-               <Clock size={14} className="text-emerald-500" /> Avg Fast
-            </div>
-            <div className="text-3xl font-bold text-white font-mono">{avgFast}<span className="text-sm text-zinc-500 ml-1">h</span></div>
-            <div className="text-xs text-zinc-500">Average Duration</div>
-         </Card>
-
-         <Card className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
-               <Activity size={14} className="text-emerald-400" /> Longest Fast
-            </div>
-            <div className="text-3xl font-bold text-white font-mono">{longestFast.toFixed(1)}<span className="text-sm text-zinc-500 ml-1">h</span></div>
-            <div className="text-xs text-zinc-500">Personal Best</div>
-         </Card>
-
-         <Card className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
-               <Dumbbell size={14} className="text-cyan-500" /> Workouts
-            </div>
-            <div className="text-3xl font-bold text-white font-mono">{workoutCount}</div>
-            <div className="text-xs text-zinc-500">Total Sessions</div>
-         </Card>
-
-         <Card className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
-               <BookOpen size={14} className="text-violet-500" /> Journals
-            </div>
-            <div className="text-3xl font-bold text-white font-mono">{journalCount}</div>
-            <div className="text-xs text-zinc-500">Entries Logged</div>
-         </Card>
-
-         <Card className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
-               <Activity size={14} className="text-pink-500" /> Deep Work
-            </div>
-            <div className="text-3xl font-bold text-white font-mono">{totalFocusHours}<span className="text-sm text-zinc-500 ml-1">h</span></div>
-            <div className="text-xs text-zinc-500">Total Focus Time</div>
-         </Card>
+      {/* Primary Stats Grid */}
+      <div className="grid grid-cols-2 gap-3">
+         <StatCard 
+            icon={Clock} 
+            label="Avg Fast" 
+            value={`${fastingAnalysis.avg}h`} 
+            subtext="Last 30 Days"
+            color="text-emerald-500" 
+         />
+         <StatCard 
+            icon={Zap} 
+            label="Deep Work" 
+            value={`${focusStats}h`} 
+            subtext="Total Focus Time"
+            color="text-cyan-400" 
+         />
+         <StatCard 
+            icon={Dumbbell} 
+            label="Workouts" 
+            value={workoutCount} 
+            subtext="Total Sessions"
+            color="text-emerald-400" 
+         />
+         <StatCard 
+            icon={BookOpen} 
+            label="Journal" 
+            value={journalCount} 
+            subtext="Entries Logged"
+            color="text-violet-500" 
+         />
       </div>
 
-      {/* Consistency Heatmap */}
+      {/* Charts Section */}
+      
+      {/* Fasting Trends */}
+      <Card>
+         <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-white flex items-center gap-2">
+               <Activity size={18} className="text-zinc-400" />
+               Fasting Trends
+            </h3>
+            <span className="text-xs text-zinc-500 font-mono">Personal Best: {fastingAnalysis.longest.toFixed(1)}h</span>
+         </div>
+         <FastingTrendChart data={fastingAnalysis.trends} goal={16} />
+      </Card>
+
+      {/* Weekly Activity */}
       <Card>
          <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-           <Activity size={18} className="text-zinc-400" />
-           Consistency (Last 28 Days)
+            <Activity size={18} className="text-zinc-400" />
+            Weekly Activity
          </h3>
-         
-         <div className="grid grid-cols-7 gap-2 mb-2">
-            {['S','M','T','W','T','F','S'].map((d, i) => (
-               <div key={i} className="text-center text-[10px] text-zinc-600 font-bold">{d}</div>
-            ))}
-         </div>
-
-         <div className="grid grid-cols-7 gap-2">
-            {/* Padding for first week alignment */}
-            {Array.from({ length: new Date(last28Days[0]).getDay() }).map((_, i) => (
-               <div key={`pad-${i}`} className="aspect-square"></div>
-            ))}
-
-            {last28Days.map((dateStr, i) => {
-                const count = activityByDate[dateStr] || 0;
-                // Color scale based on count
-                let bgClass = 'bg-zinc-800/50';
-                if (count > 0) bgClass = 'bg-emerald-500/30 border-emerald-500/50';
-                if (count > 2) bgClass = 'bg-emerald-500/60 border-emerald-500/80';
-                if (count > 4) bgClass = 'bg-emerald-500 border-emerald-400';
-                
-                return (
-                    <div key={dateStr} className={`aspect-square rounded-md border border-transparent transition-all ${bgClass} relative group`}>
-                       <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-zinc-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap border border-zinc-800 pointer-events-none z-10 shadow-xl">
-                          {new Date(dateStr).toLocaleDateString(undefined, {weekday: 'short', month:'short', day:'numeric'})}: {count} entries
-                       </div>
-                    </div>
-                )
-            })}
-         </div>
+         <ActivityBarChart data={weeklyActivity} />
       </Card>
     </div>
   );
