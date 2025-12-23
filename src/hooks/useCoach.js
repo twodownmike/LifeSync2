@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db, appId } from '../lib/firebase';
 
-export function useCoach(user, apiKey, entries, userSettings, fastingData, bioPhase) {
+export function useCoach(user, apiKey, entries, routines, userSettings, fastingData, bioPhase) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
@@ -60,22 +60,43 @@ export function useCoach(user, apiKey, entries, userSettings, fastingData, bioPh
             createdAt: new Date().toISOString()
         });
 
-        const allMeals = entries.filter(e => e.type === 'meal').map(e => 
-            `- ${new Date(e.timestamp).toLocaleDateString()} ${new Date(e.timestamp).toLocaleTimeString()}: ${e.title} (${e.note || ''})`
-        ).join('\n');
+        // --- Context Building ---
 
-        const allWorkouts = entries.filter(e => e.type === 'workout').map(e => {
-            const exercises = e.exercises ? e.exercises.map(ex => `${ex.name} ${ex.weight}lb x ${ex.reps}`).join(', ') : '';
-            return `- ${new Date(e.timestamp).toLocaleDateString()}: ${e.title} ${exercises ? '[' + exercises + ']' : ''} (${e.note || ''})`;
+        // 1. Logs
+        const formatMood = (e) => {
+            if (!e.mood && !e.energy) return '';
+            return `[Mood: ${e.mood || '-'}/10, Energy: ${e.energy || '-'}/10]`;
+        };
+
+        const allMeals = entries
+            .filter(e => e.type === 'meal')
+            .slice(0, 10) // Limit context
+            .map(e => `- ${new Date(e.timestamp).toLocaleDateString()} ${new Date(e.timestamp).toLocaleTimeString()}: ${e.title} ${formatMood(e)} (${e.note || ''})`)
+            .join('\n');
+
+        const allWorkouts = entries
+            .filter(e => e.type === 'workout')
+            .slice(0, 10)
+            .map(e => {
+                const exercises = e.exercises ? e.exercises.map(ex => `${ex.name} ${ex.weight}lb x ${ex.reps}`).join(', ') : '';
+                return `- ${new Date(e.timestamp).toLocaleDateString()}: ${e.title} ${formatMood(e)} ${exercises ? '{' + exercises + '}' : ''}`;
+            }).join('\n');
+
+        const allJournals = entries
+            .filter(e => e.type === 'journal' || e.type === 'breathwork' || e.type === 'work_session')
+            .slice(0, 10)
+            .map(e => `- ${new Date(e.timestamp).toLocaleDateString()}: [${e.type.toUpperCase()}] ${e.title} ${formatMood(e)} - ${e.note || ''}`)
+            .join('\n');
+
+        // 2. Routines
+        const todayIndex = new Date().getDay();
+        const routineContext = routines.map(r => {
+            const isToday = r.days.includes(todayIndex);
+            const isDone = (r.completedDates || []).includes(new Date().toISOString().split('T')[0]);
+            return `- ${r.title} (${r.type}): ${isToday ? (isDone ? "DONE" : "PENDING") : "Not scheduled today"}`;
         }).join('\n');
-
-        const allJournals = entries.filter(e => e.type === 'journal').map(e => 
-            `- ${new Date(e.timestamp).toLocaleDateString()}: ${e.title} - ${e.note || ''}`
-        ).join('\n');
         
-        const lastMeal = entries.find(e => e.type === 'meal');
-        
-        // Calculate physiological state for context
+        // 3. Physiology
         const totalFastHours = fastingData.hours + (fastingData.minutes/60);
         let physioState = "Normal fed state";
         if (totalFastHours > 18) physioState = "Deep Autophagy (Cellular Repair Mode)";
@@ -83,42 +104,44 @@ export function useCoach(user, apiKey, entries, userSettings, fastingData, bioPh
         else if (totalFastHours > 4) physioState = "Fasting State (Insulin Dropping)";
         else if (totalFastHours > 0) physioState = "Digesting / Absorbative Phase";
 
-        const fastingContext = `
-        Current Fasting Status:
-        - State: ${fastingData.label} (${physioState})
-        - Duration: ${fastingData.hours}h ${fastingData.minutes}m
-        - Goal: ${userSettings.fastingGoal}h
-        `;
-
-        const currentTime = new Date();
-
         const systemPrompt = `
           You are LifeSync AI, an elite bio-hacking coach and health strategist.
           Your goal is to optimize the user's energy, focus, and longevity using their real-time data.
           
-          USER PROFILE:
-          - Name: ${userSettings.displayName}
-          - Goals: ${userSettings.fitnessGoal} (Fitness), ${userSettings.dietGoal} (Diet)
-          - Bio Phase: ${bioPhase.title} (${bioPhase.desc}) -> Tailor advice to this circadian phase.
+          ### USER PROFILE
+          - **Name:** ${userSettings.displayName}
+          - **Stats:** ${userSettings.age || '?'}yo, ${userSettings.weight || '?'}lbs, ${userSettings.height || '?'}
+          - **Goals:** ${userSettings.fitnessGoal} (Fitness), ${userSettings.dietGoal} (Diet)
+          - **Bio Phase:** ${bioPhase.title} (${bioPhase.desc}) -> Tailor advice to this circadian phase.
           
-          REAL-TIME PHYSIOLOGY:
-          ${fastingContext}
+          ### REAL-TIME PHYSIOLOGY
+          - **Fasting:** ${fastingData.hours}h ${fastingData.minutes}m (${fastingData.label})
+          - **State:** ${physioState}
+          - **Goal:** ${userSettings.fastingGoal}h
+
+          ### ROUTINE STATUS (Today)
+          ${routineContext || "No active routines."}
           
-          RECENT LOGS:
-          [MEALS]
+          ### RECENT LOGS (Last 10 Entries)
+          **Meals:**
           ${allMeals || "No recent meals."}
           
-          [WORKOUTS]
+          **Workouts:**
           ${allWorkouts || "No recent workouts."}
           
-          [JOURNAL]
-          ${allJournals || "No recent notes."}
+          **Activity & Mood:**
+          ${allJournals || "No recent activity."}
 
-          GUIDELINES:
-          1. Be concise, punchy, and motivating. No fluff.
-          2. Use the "Bio Phase" and "Fasting State" to give specific timing advice (e.g., "Since you're in Autophagy, wait to eat...").
-          3. If they ask for a workout, check their recent logs to avoid overtraining the same muscle groups.
-          4. Format with Markdown (bold key terms, use bullet points).
+          ### GUIDELINES
+          1. **Be Concise & Punchy:** Avoid long paragraphs. Use bullet points and short sentences.
+          2. **Data-Driven:** Reference specific logs, mood ratings, or metrics (e.g., "I see your energy was low after that meal...").
+          3. **Bio-Rhythm Aware:** If it's late (Phase: Recover), suggest winding down. If early (Phase: Prime), suggest action.
+          4. **Hard Truths:** If the user is missing routines or breaking fasts early, call them out gently but firmly.
+          5. **Formatting:**
+             - Use '###' for small section headers.
+             - Use '> ' for a "Key Takeaway" or "Quote of the Moment" at the end.
+             - Use '**bold**' for emphasis.
+             - Use numbered lists for action plans.
         `;
 
         const history = messages.map(m => ({ role: m.role, content: m.content }));
@@ -138,7 +161,7 @@ export function useCoach(user, apiKey, entries, userSettings, fastingData, bioPh
             body: JSON.stringify({
               model: "gpt-4o-mini",
               messages: apiMessages,
-              max_tokens: 500
+              max_tokens: 600
             })
         });
 

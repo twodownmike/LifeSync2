@@ -22,6 +22,23 @@ export const MarkdownText = ({ text }) => {
             </div>
           )
         }
+        if (/^\d+\.\s/.test(line.trim())) {
+           const content = line.trim().replace(/^\d+\.\s/, '');
+           const number = line.trim().match(/^\d+/)[0];
+           return (
+             <div key={i} className="flex gap-2 pl-2 mb-1">
+               <span className="text-violet-400 font-bold min-w-[1.2rem]">{number}.</span>
+               <span className="text-zinc-300">{parseBold(content)}</span>
+             </div>
+           )
+        }
+        if (line.trim().startsWith('> ')) {
+            return (
+                <div key={i} className="border-l-2 border-violet-500 pl-3 my-2 text-zinc-400 italic">
+                    {parseBold(line.trim().substring(2))}
+                </div>
+            );
+        }
         if (line.trim() === '') return <div key={i} className="h-2"></div>;
         return <div key={i} className="text-zinc-300">{parseBold(line)}</div>;
       })}

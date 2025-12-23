@@ -241,6 +241,7 @@ export default function LifeSync() {
                user={user} 
                apiKey={apiKey} 
                entries={entries} 
+               routines={routines}
                userSettings={userSettings} 
                fastingData={fastingData} 
                bioPhase={bioPhase}

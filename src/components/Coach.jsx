@@ -4,8 +4,8 @@ import { Button } from './UI';
 import { MarkdownText } from './MarkdownText';
 import { useCoach } from '../hooks/useCoach';
 
-export default function Coach({ user, apiKey, entries, userSettings, fastingData, bioPhase, onOpenSettings }) {
-  const { messages, loading, sendMessage, clearChat, chatEndRef } = useCoach(user, apiKey, entries, userSettings, fastingData, bioPhase);
+export default function Coach({ user, apiKey, entries, routines, userSettings, fastingData, bioPhase, onOpenSettings }) {
+  const { messages, loading, sendMessage, clearChat, chatEndRef } = useCoach(user, apiKey, entries, routines, userSettings, fastingData, bioPhase);
   const [chatInput, setChatInput] = useState('');
 
   const quickActions = [
