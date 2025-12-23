@@ -67,7 +67,7 @@ export default function Dashboard({
                 <p className="text-zinc-600 text-xs">No tasks for today.</p>
              </div>
          ) : (
-             <div className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide -mx-6 px-6">
+             <div className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide -mx-6 px-6 snap-x snap-mandatory">
                 {todaysRoutines.map(routine => {
                    const isCompleted = (routine.completedDates || []).includes(todayStr);
                    const colors = {
@@ -81,7 +81,7 @@ export default function Dashboard({
                         key={routine.id}
                         onClick={() => onToggleRoutine(routine.id, isCompleted)}
                         className={`
-                           flex-none w-36 p-3 rounded-2xl border transition-all cursor-pointer group flex flex-col justify-between min-h-[100px]
+                           flex-none w-36 p-3 rounded-2xl border transition-all cursor-pointer group flex flex-col justify-between min-h-[100px] snap-start
                            ${isCompleted ? 'bg-zinc-900/30 border-zinc-800/50 opacity-50' : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'}
                         `}
                       >

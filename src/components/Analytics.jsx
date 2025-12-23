@@ -90,7 +90,19 @@ export default function Analytics({ entries }) {
            <Activity size={18} className="text-zinc-400" />
            Consistency (Last 28 Days)
          </h3>
+         
+         <div className="grid grid-cols-7 gap-2 mb-2">
+            {['S','M','T','W','T','F','S'].map((d, i) => (
+               <div key={i} className="text-center text-[10px] text-zinc-600 font-bold">{d}</div>
+            ))}
+         </div>
+
          <div className="grid grid-cols-7 gap-2">
+            {/* Padding for first week alignment */}
+            {Array.from({ length: new Date(last28Days[0]).getDay() }).map((_, i) => (
+               <div key={`pad-${i}`} className="aspect-square"></div>
+            ))}
+
             {last28Days.map((dateStr, i) => {
                 const count = activityByDate[dateStr] || 0;
                 // Color scale based on count
@@ -102,7 +114,7 @@ export default function Analytics({ entries }) {
                 return (
                     <div key={dateStr} className={`aspect-square rounded-md border border-transparent transition-all ${bgClass} relative group`}>
                        <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-zinc-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap border border-zinc-800 pointer-events-none z-10 shadow-xl">
-                          {new Date(dateStr).toLocaleDateString(undefined, {month:'short', day:'numeric'})}: {count} entries
+                          {new Date(dateStr).toLocaleDateString(undefined, {weekday: 'short', month:'short', day:'numeric'})}: {count} entries
                        </div>
                     </div>
                 )
