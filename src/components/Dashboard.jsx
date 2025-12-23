@@ -51,58 +51,61 @@ export default function Dashboard({
       </div>
 
       {/* Routine / Daily Checklist Section */}
-      <div className="mb-8">
-         <div className="flex justify-between items-center mb-3">
-             <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <ListChecks size={18} className="text-zinc-400" />
+      <div className="mb-2">
+         <div className="flex justify-between items-center mb-3 px-1">
+             <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                <ListChecks size={14} />
                 Daily Checklist
              </h3>
-             <button onClick={onOpenRoutineModal} className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-700">
+             <button onClick={onOpenRoutineModal} className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-500 hover:text-white transition-colors">
                <Plus size={16} />
              </button>
          </div>
 
          {todaysRoutines.length === 0 ? (
-             <div className="text-center py-6 border border-dashed border-zinc-800 rounded-xl">
-                <p className="text-zinc-500 text-xs">No tasks for today.</p>
+             <div className="text-center py-4 border border-dashed border-zinc-900 rounded-xl bg-zinc-900/30 mx-1">
+                <p className="text-zinc-600 text-xs">No tasks for today.</p>
              </div>
          ) : (
-             <div className="space-y-2">
+             <div className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide -mx-6 px-6">
                 {todaysRoutines.map(routine => {
                    const isCompleted = (routine.completedDates || []).includes(todayStr);
                    const colors = {
-                      diet: 'text-orange-400 border-orange-500/30 bg-orange-500/10',
-                      exercise: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
-                      mindset: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10'
+                      diet: 'text-orange-400 border-orange-500/20 bg-orange-500/5',
+                      exercise: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5',
+                      mindset: 'text-cyan-400 border-cyan-500/20 bg-cyan-500/5'
                    };
                    
                    return (
                       <div 
                         key={routine.id}
                         onClick={() => onToggleRoutine(routine.id, isCompleted)}
-                        className={`relative flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group
-                           ${isCompleted ? 'bg-zinc-900/30 border-zinc-800 opacity-60' : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'}`}
+                        className={`
+                           flex-none w-36 p-3 rounded-2xl border transition-all cursor-pointer group flex flex-col justify-between min-h-[100px]
+                           ${isCompleted ? 'bg-zinc-900/30 border-zinc-800/50 opacity-50' : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'}
+                        `}
                       >
-                          <div className={`${isCompleted ? 'text-zinc-600' : colors[routine.type].split(' ')[0]}`}>
-                            {isCompleted ? <CheckCircle size={20} /> : <Circle size={20} />}
+                          <div className="flex justify-between items-start">
+                              <div className={`${isCompleted ? 'text-zinc-600' : colors[routine.type].split(' ')[0]}`}>
+                                {isCompleted ? <CheckCircle size={18} /> : <Circle size={18} />}
+                              </div>
+                              
+                              <button 
+                                 onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }}
+                                 className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                 <Trash2 size={13} />
+                              </button>
                           </div>
                           
-                          <div className="flex-1">
-                             <div className={`text-sm font-medium ${isCompleted ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
+                          <div>
+                             <div className={`text-xs font-medium leading-tight mb-1.5 ${isCompleted ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
                                {routine.title}
                              </div>
+                             <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${colors[routine.type]}`}>
+                                {routine.type}
+                             </span>
                           </div>
-
-                          <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${colors[routine.type]}`}>
-                             {routine.type}
-                          </span>
-
-                          <button 
-                             onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }}
-                             className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-600 hover:text-red-400 transition-all"
-                          >
-                             <Trash2 size={14} />
-                          </button>
                       </div>
                    )
                 })}
