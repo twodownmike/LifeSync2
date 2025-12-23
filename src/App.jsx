@@ -42,6 +42,7 @@ export default function LifeSync() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false); 
   const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
+  const [isBreathworkOpen, setIsBreathworkOpen] = useState(false);
   
   const [modalType, setModalType] = useState(null); 
   const [note, setNote] = useState('');
@@ -184,6 +185,7 @@ export default function LifeSync() {
                 onOpenRoutineModal={() => setIsRoutineModalOpen(true)}
                 onOpenGoalModal={() => { setTempGoal(userSettings.fastingGoal); setIsGoalModalOpen(true); }}
                 onOpenInfoModal={() => setIsInfoModalOpen(true)}
+                onOpenBreathwork={() => setIsBreathworkOpen(true)}
              />
            )}
            {activeTab === 'fasting' && (
