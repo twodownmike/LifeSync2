@@ -47,8 +47,11 @@ import {
   ListChecks,
   CheckCircle,
   Circle,
-  BarChart2
+  BarChart2,
+  Brain
 } from 'lucide-react';
+
+import FocusMode from './FocusMode';
 
 // --- Firebase Imports ---
 import { initializeApp } from 'firebase/app';
@@ -219,7 +222,8 @@ const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
       {/* Dot */}
       <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-zinc-950 
         ${entry.type === 'meal' ? 'bg-orange-400' : 
-          entry.type === 'workout' ? 'bg-emerald-400' : 'bg-violet-400'}`} 
+          entry.type === 'workout' ? 'bg-emerald-400' : 
+          entry.type === 'work_session' ? 'bg-cyan-400' : 'bg-violet-400'}`} 
       />
       
       <div 
@@ -232,6 +236,11 @@ const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
                <span className="text-xs font-mono text-zinc-500">
                  {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                </span>
+               {entry.type === 'work_session' && (
+                <span className="inline-block mb-2 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded border border-cyan-500/30">
+                   {entry.duration} mins
+                </span>
+               )}
                {fastDuration && (
                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
                    {fastDuration} Fast
@@ -629,6 +638,14 @@ export default function LifeSync() {
     }
   };
 
+  const toggleDay = (dayIdx) => {
+    if (routineDays.includes(dayIdx)) {
+       setRoutineDays(routineDays.filter(d => d !== dayIdx));
+    } else {
+       setRoutineDays([...routineDays, dayIdx].sort());
+    }
+  };
+
   const handleToggleRoutine = async (routineId, isCompleted) => {
      if (!user) return;
      const today = new Date().toISOString().split('T')[0];
@@ -873,11 +890,47 @@ export default function LifeSync() {
 
   // --- Render Views ---
 
-  const renderTimeline = () => (
+  const handleFocusSessionComplete = async (durationMinutes, taskLabel, tag) => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+        const tags = ['productivity', 'deep_work'];
+        if (tag) tags.push(tag);
+
+        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'entries'), {
+            type: 'work_session',
+            title: 'Deep Work Session',
+            note: taskLabel ? `Worked on: ${taskLabel}` : 'Focus Session',
+            tags: tags,
+            duration: durationMinutes,
+            timestamp: new Date().toISOString()
+        });
+        
+        // Check for achievements? (Could add later)
+    } catch (err) {
+        console.error("Error logging session:", err);
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  const renderTimeline = () => {
+    // Routine Logic
+    const todayIndex = new Date().getDay();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todaysRoutines = routines.filter(r => r.days.includes(todayIndex));
+    todaysRoutines.sort((a, b) => {
+       const aDone = (a.completedDates || []).includes(todayStr);
+       const bDone = (b.completedDates || []).includes(todayStr);
+       if (aDone === bDone) return 0;
+       return aDone ? 1 : -1;
+    });
+
+    return (
     <div className="space-y-6 pb-24 animate-fade-in">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-white">Timeline</h2>
+          <h2 className="text-2xl font-bold text-white">Home</h2>
           <p className="text-zinc-400 text-sm mb-3">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${bioPhase.color}`}>
               <span className="text-[10px] font-bold uppercase tracking-wider">{bioPhase.title}</span>
@@ -886,16 +939,67 @@ export default function LifeSync() {
           </div>
         </div>
         
-        <div onClick={() => setActiveTab('profile')} className="cursor-pointer flex items-center gap-2 bg-zinc-900/50 p-1 pr-3 rounded-full border border-zinc-800 hover:bg-zinc-800 transition-colors">
-          <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700 overflow-hidden">
-            {user?.photoURL ? (
-               <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
-            ) : (
-               <span className="text-xs font-bold text-emerald-500">{userSettings.displayName.charAt(0).toUpperCase()}</span>
-            )}
-          </div>
-          <span className="text-xs font-medium text-zinc-300 max-w-[60px] truncate">{userSettings.displayName.split(' ')[0]}</span>
-        </div>
+        {/* Profile/User Menu is now in Header, but we keep this empty or remove it. Keeping layout clean. */}
+      </div>
+
+      {/* Routine / Daily Checklist Section */}
+      <div className="mb-8">
+         <div className="flex justify-between items-center mb-3">
+             <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <ListChecks size={18} className="text-zinc-400" />
+                Daily Checklist
+             </h3>
+             <button onClick={() => setIsRoutineModalOpen(true)} className="p-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-400 hover:text-white hover:border-zinc-700">
+               <Plus size={16} />
+             </button>
+         </div>
+
+         {todaysRoutines.length === 0 ? (
+             <div className="text-center py-6 border border-dashed border-zinc-800 rounded-xl">
+                <p className="text-zinc-500 text-xs">No tasks for today.</p>
+             </div>
+         ) : (
+             <div className="space-y-2">
+                {todaysRoutines.map(routine => {
+                   const isCompleted = (routine.completedDates || []).includes(todayStr);
+                   const colors = {
+                      diet: 'text-orange-400 border-orange-500/30 bg-orange-500/10',
+                      exercise: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+                      mindset: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10'
+                   };
+                   
+                   return (
+                      <div 
+                        key={routine.id}
+                        onClick={() => handleToggleRoutine(routine.id, isCompleted)}
+                        className={`relative flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group
+                           ${isCompleted ? 'bg-zinc-900/30 border-zinc-800 opacity-60' : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'}`}
+                      >
+                          <div className={`${isCompleted ? 'text-zinc-600' : colors[routine.type].split(' ')[0]}`}>
+                            {isCompleted ? <CheckCircle size={20} /> : <Circle size={20} />}
+                          </div>
+                          
+                          <div className="flex-1">
+                             <div className={`text-sm font-medium ${isCompleted ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
+                               {routine.title}
+                             </div>
+                          </div>
+
+                          <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${colors[routine.type]}`}>
+                             {routine.type}
+                          </span>
+
+                          <button 
+                             onClick={(e) => { e.stopPropagation(); handleDeleteRoutine(routine.id); }}
+                             className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-600 hover:text-red-400 transition-all"
+                          >
+                             <Trash2 size={14} />
+                          </button>
+                      </div>
+                   )
+                })}
+             </div>
+         )}
       </div>
 
       {/* Fast Timer Widget */}
@@ -927,6 +1031,7 @@ export default function LifeSync() {
          </div>
       </div>
 
+      <h3 className="text-lg font-bold text-white mb-4">Timeline</h3>
       {entries.length === 0 ? (
         <div className="text-center py-20 opacity-50">
           <div className="inline-block p-4 rounded-full bg-zinc-900 mb-4">
@@ -952,7 +1057,8 @@ export default function LifeSync() {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   const renderFasting = () => {
     // Calculation safe-guard for strokeDashoffset to avoid NaN/Infinity errors rendering blank screen
@@ -1034,155 +1140,6 @@ export default function LifeSync() {
     );
   };
 
-  const renderRoutine = () => {
-     const todayIndex = new Date().getDay();
-     const todayStr = new Date().toISOString().split('T')[0];
-     
-     const todaysRoutines = routines.filter(r => r.days.includes(todayIndex));
-     
-     todaysRoutines.sort((a, b) => {
-        const aDone = (a.completedDates || []).includes(todayStr);
-        const bDone = (b.completedDates || []).includes(todayStr);
-        if (aDone === bDone) return 0;
-        return aDone ? 1 : -1;
-     });
-
-     const toggleDay = (dayIdx) => {
-        if (routineDays.includes(dayIdx)) {
-           setRoutineDays(routineDays.filter(d => d !== dayIdx));
-        } else {
-           setRoutineDays([...routineDays, dayIdx].sort());
-        }
-     };
-
-     return (
-       <div className="flex flex-col h-full pb-24 animate-fade-in">
-          <div className="flex justify-between items-center mb-6">
-             <h2 className="text-2xl font-bold text-white">Daily Checklist</h2>
-             <button onClick={() => setIsRoutineModalOpen(true)} className="p-2 bg-zinc-800 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-700">
-               <Plus size={20} />
-             </button>
-          </div>
-
-          {todaysRoutines.length === 0 ? (
-             <div className="text-center py-12 opacity-50">
-                <ListChecks size={48} className="mx-auto mb-4 text-zinc-600" />
-                <p className="text-zinc-400 text-sm">No tasks scheduled for today.</p>
-                <button onClick={() => setIsRoutineModalOpen(true)} className="mt-4 text-violet-400 text-sm font-bold hover:underline">
-                  Create a Routine
-                </button>
-             </div>
-          ) : (
-             <div className="space-y-3">
-                {todaysRoutines.map(routine => {
-                   const isCompleted = (routine.completedDates || []).includes(todayStr);
-                   const colors = {
-                      diet: 'text-orange-400 border-orange-500/30 bg-orange-500/10',
-                      exercise: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
-                      mindset: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10'
-                   };
-                   
-                   return (
-                      <div 
-                        key={routine.id}
-                        onClick={() => handleToggleRoutine(routine.id, isCompleted)}
-                        className={`relative flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer group
-                           ${isCompleted ? 'bg-zinc-900/30 border-zinc-800 opacity-60' : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'}`}
-                      >
-                          <div className={`${isCompleted ? 'text-zinc-600' : colors[routine.type].split(' ')[0]}`}>
-                            {isCompleted ? <CheckCircle size={24} /> : <Circle size={24} />}
-                          </div>
-                          
-                          <div className="flex-1">
-                             <div className={`font-medium ${isCompleted ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
-                               {routine.title}
-                             </div>
-                             <div className="flex gap-2 mt-1">
-                               <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${colors[routine.type]}`}>
-                                 {routine.type}
-                               </span>
-                             </div>
-                          </div>
-
-                          <button 
-                             onClick={(e) => { e.stopPropagation(); handleDeleteRoutine(routine.id); }}
-                             className="opacity-0 group-hover:opacity-100 p-2 text-zinc-600 hover:text-red-400 transition-all"
-                          >
-                             <Trash2 size={16} />
-                          </button>
-                      </div>
-                   )
-                })}
-             </div>
-          )}
-
-          {isRoutineModalOpen && (
-             <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-                <div className="bg-zinc-900 w-full max-w-sm rounded-3xl border border-zinc-800 p-6 animate-slide-up shadow-2xl">
-                   <h3 className="text-lg font-bold text-white mb-4">New Recurring Task</h3>
-                   
-                   <div className="space-y-4">
-                      <div>
-                          <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Task Name</label>
-                          <input 
-                            type="text" 
-                            placeholder="e.g. Morning Journal" 
-                            value={routineTitle}
-                            onChange={(e) => setRoutineTitle(e.target.value)}
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
-                          />
-                      </div>
-
-                      <div>
-                          <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Category</label>
-                          <div className="grid grid-cols-3 gap-2">
-                             {['diet', 'exercise', 'mindset'].map(t => (
-                                <button
-                                  key={t}
-                                  onClick={() => setRoutineType(t)}
-                                  className={`py-2 rounded-lg text-xs font-bold uppercase transition-colors border
-                                    ${routineType === t 
-                                       ? 'bg-zinc-800 text-white border-zinc-600' 
-                                       : 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:border-zinc-700'}`}
-                                >
-                                  {t}
-                                </button>
-                             ))}
-                          </div>
-                      </div>
-
-                      <div>
-                          <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Days of Week</label>
-                          <div className="flex justify-between gap-1">
-                             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => toggleDay(i)}
-                                  className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center transition-all
-                                    ${routineDays.includes(i) 
-                                       ? 'bg-violet-600 text-white' 
-                                       : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'}`}
-                                >
-                                  {d}
-                                </button>
-                             ))}
-                          </div>
-                          <p className="text-[10px] text-zinc-500 mt-2 text-center">
-                             {routineDays.length === 0 ? "Select days or leave empty for Daily" : ""}
-                          </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 mt-6">
-                          <Button variant="ghost" onClick={() => setIsRoutineModalOpen(false)} className="bg-zinc-800 text-zinc-400 hover:bg-zinc-700">Cancel</Button>
-                          <Button onClick={handleCreateRoutine} disabled={isSaving || !routineTitle}>Create</Button>
-                      </div>
-                   </div>
-                </div>
-             </div>
-          )}
-       </div>
-     )
-  }
 
   const renderCoach = () => {
     const quickActions = [
@@ -1585,10 +1542,9 @@ export default function LifeSync() {
         </Card>
       </div>
     </div>
-  );
+  };
 
   // --- Modals ---
-
 
   const renderGoalModal = () => {
     if (!isGoalModalOpen) return null;
@@ -1903,6 +1859,81 @@ export default function LifeSync() {
     )
   }
 
+  const renderRoutineModal = () => {
+    if (!isRoutineModalOpen) return null;
+    
+    const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    
+    return (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="bg-zinc-900 w-full max-w-sm rounded-3xl border border-zinc-800 p-6 animate-slide-up shadow-2xl">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold text-white">New Routine</h3>
+            <button onClick={() => setIsRoutineModalOpen(false)} className="p-2 text-zinc-500 hover:text-white rounded-full hover:bg-zinc-800 transition-colors">
+              <X size={24} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+               <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Title</label>
+               <input 
+                 type="text" 
+                 placeholder="e.g. Morning Walk, Read 10 Pages" 
+                 value={routineTitle}
+                 onChange={(e) => setRoutineTitle(e.target.value)}
+                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
+               />
+            </div>
+
+            <div>
+               <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Type</label>
+               <div className="grid grid-cols-3 gap-2">
+                 {['mindset', 'exercise', 'diet'].map(t => (
+                   <button
+                     key={t}
+                     onClick={() => setRoutineType(t)}
+                     className={`px-3 py-2 rounded-lg text-xs font-bold capitalize border transition-all
+                       ${routineType === t 
+                         ? 'bg-zinc-800 text-white border-zinc-600' 
+                         : 'bg-transparent text-zinc-500 border-zinc-800 hover:border-zinc-700'}`}
+                   >
+                     {t}
+                   </button>
+                 ))}
+               </div>
+            </div>
+
+            <div>
+               <label className="text-xs text-zinc-500 font-medium uppercase block mb-2">Frequency</label>
+               <div className="flex justify-between gap-1">
+                 {days.map((d, i) => (
+                   <button
+                     key={i}
+                     onClick={() => toggleDay(i)}
+                     className={`w-8 h-8 rounded-full text-xs font-bold transition-all
+                       ${routineDays.includes(i)
+                         ? 'bg-emerald-500 text-black' 
+                         : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'}`}
+                   >
+                     {d}
+                   </button>
+                 ))}
+               </div>
+               <p className="text-[10px] text-zinc-500 mt-2 text-center">
+                 {routineDays.length === 0 ? 'Every day' : 'Selected days only'}
+               </p>
+            </div>
+            
+            <Button onClick={handleCreateRoutine} disabled={isSaving || !routineTitle} className="w-full mt-4">
+              {isSaving ? 'Creating...' : 'Create Routine'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center flex-col gap-4">
@@ -1923,7 +1954,26 @@ export default function LifeSync() {
             <div className="w-2 h-8 bg-emerald-500 rounded-full"></div>
             <h1 className="text-xl font-bold tracking-tight text-white">LifeSync</h1>
           </div>
-          <div className="w-8"></div> 
+          
+          <div className="flex items-center gap-4">
+             <button 
+               onClick={() => setActiveTab('coach')}
+               className={`transition-colors ${activeTab === 'coach' ? 'text-violet-400' : 'text-zinc-400 hover:text-white'}`}
+             >
+               <Sparkles size={20} />
+             </button>
+             
+             <button 
+               onClick={() => setActiveTab('profile')}
+               className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700 overflow-hidden"
+             >
+                {user?.photoURL ? (
+                   <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
+                ) : (
+                   <span className="text-xs font-bold text-emerald-500">{userSettings.displayName.charAt(0).toUpperCase()}</span>
+                )}
+             </button>
+          </div>
         </header>
 
         {/* Content */}
@@ -1932,7 +1982,7 @@ export default function LifeSync() {
           {activeTab === 'fasting' && renderFasting()}
           {activeTab === 'coach' && renderCoach()}
           {activeTab === 'analytics' && renderAnalytics()}
-          {activeTab === 'routine' && renderRoutine()}
+          {activeTab === 'focus' && <FocusMode onSessionComplete={handleFocusSessionComplete} />}
           {activeTab === 'profile' && renderProfile()}
         </div>
 
@@ -1957,14 +2007,6 @@ export default function LifeSync() {
                   <Clock size={20} />
                   <span className="text-[9px] font-medium">Fast</span>
                 </button>
-                
-                <button 
-                  onClick={() => setActiveTab('routine')}
-                  className={`flex flex-col items-center gap-1 min-w-[40px] transition-colors ${activeTab === 'routine' ? 'text-orange-400' : 'text-zinc-600'}`}
-                >
-                  <ListChecks size={20} />
-                  <span className="text-[9px] font-medium">Plan</span>
-                </button>
               </div>
 
               {/* Center Plus Button */}
@@ -1981,27 +2023,19 @@ export default function LifeSync() {
               {/* Right Side */}
               <div className="flex items-center justify-around flex-1">
                 <button 
+                  onClick={() => setActiveTab('focus')}
+                  className={`flex flex-col items-center gap-1 min-w-[40px] transition-colors ${activeTab === 'focus' ? 'text-cyan-400' : 'text-zinc-600'}`}
+                >
+                  <Brain size={20} />
+                  <span className="text-[9px] font-medium">Focus</span>
+                </button>
+
+                <button 
                   onClick={() => setActiveTab('analytics')}
                   className={`flex flex-col items-center gap-1 min-w-[40px] transition-colors ${activeTab === 'analytics' ? 'text-cyan-400' : 'text-zinc-600'}`}
                 >
                   <BarChart2 size={20} />
                   <span className="text-[9px] font-medium">Stats</span>
-                </button>
-
-                <button 
-                  onClick={() => setActiveTab('coach')}
-                  className={`flex flex-col items-center gap-1 min-w-[40px] transition-colors ${activeTab === 'coach' ? 'text-violet-400' : 'text-zinc-600'}`}
-                >
-                  <Sparkles size={20} />
-                  <span className="text-[9px] font-medium">Coach</span>
-                </button>
-                
-                <button 
-                  onClick={() => setActiveTab('profile')}
-                  className={`flex flex-col items-center gap-1 min-w-[40px] transition-colors ${activeTab === 'profile' ? 'text-white' : 'text-zinc-600'}`}
-                >
-                  <User size={20} />
-                  <span className="text-[9px] font-medium">Profile</span>
                 </button>
               </div>
 
@@ -2015,6 +2049,7 @@ export default function LifeSync() {
       {renderAddModal()}
       {renderInfoModal()}
       {renderGoalModal()}
+      {renderRoutineModal()}
       
       <style jsx global>{`
         @keyframes slide-up {
