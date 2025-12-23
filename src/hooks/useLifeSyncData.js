@@ -19,6 +19,11 @@ export function useLifeSyncData(user) {
     fitnessGoal: '',
     dietGoal: '', 
     dietaryPreferences: '',
+    age: '',
+    weight: '',
+    height: '',
+    gender: '',
+    activityLevel: 'moderate',
     unlockedAchievements: [],
     activeDetox: null 
   });

@@ -214,6 +214,7 @@ export default function LifeSync() {
            {activeTab === 'profile' && (
              <Profile 
                 user={user}
+                entries={entries}
                 userSettings={userSettings}
                 setUserSettings={setUserSettings}
                 apiKey={apiKey}
