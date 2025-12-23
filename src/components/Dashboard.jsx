@@ -1,5 +1,5 @@
-import React from 'react';
-import { ListChecks, Plus, Activity, CheckCircle, Circle, Trash2, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { ListChecks, Plus, Activity, CheckCircle, Circle, Trash2, Clock, Filter } from 'lucide-react';
 import { TimelineEntry } from './TimelineEntry';
 
 export default function Dashboard({ 
@@ -15,6 +15,8 @@ export default function Dashboard({
   onOpenGoalModal,
   onOpenInfoModal
 }) {
+  const [filter, setFilter] = useState('all');
+
   const todayIndex = new Date().getDay();
   const todayStr = new Date().toISOString().split('T')[0];
   const todaysRoutines = routines.filter(r => r.days.includes(todayIndex));
@@ -23,6 +25,15 @@ export default function Dashboard({
      const bDone = (b.completedDates || []).includes(todayStr);
      if (aDone === bDone) return 0;
      return aDone ? 1 : -1;
+  });
+
+  const filteredEntries = entries.filter(entry => {
+    if (filter === 'all') return true;
+    if (filter === 'meals') return entry.type === 'meal';
+    if (filter === 'workouts') return entry.type === 'workout';
+    if (filter === 'focus') return entry.type === 'work_session';
+    if (filter === 'journal') return entry.type === 'journal';
+    return true;
   });
 
   return (
@@ -129,25 +140,44 @@ export default function Dashboard({
          </div>
       </div>
 
-      <h3 className="text-lg font-bold text-white mb-4">Timeline</h3>
-      {entries.length === 0 ? (
+      <div className="flex items-center justify-between mb-4">
+         <h3 className="text-lg font-bold text-white">Timeline</h3>
+         <div className="flex bg-zinc-900/50 border border-zinc-800 p-1 rounded-xl overflow-x-auto scrollbar-hide gap-1 max-w-[200px] sm:max-w-none">
+            {['all', 'meals', 'workouts', 'journal', 'focus'].map(f => (
+               <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize whitespace-nowrap transition-all ${
+                     filter === f ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+               >
+                  {f}
+               </button>
+            ))}
+         </div>
+      </div>
+
+      {filteredEntries.length === 0 ? (
         <div className="text-center py-20 opacity-50">
           <div className="inline-block p-4 rounded-full bg-zinc-900 mb-4">
             <Activity className="text-zinc-500" size={32} />
           </div>
-          <p className="text-zinc-400">No activity yet. Tap + to start.</p>
+          <p className="text-zinc-400">No activity found.</p>
         </div>
       ) : (
         <div className="relative border-l-2 border-zinc-800 ml-4 space-y-8">
-          {entries.map((entry, index) => {
+          {filteredEntries.map((entry) => {
             let fastDuration = null;
             if (entry.type === 'meal') {
-               const prevMeal = entries.slice(index + 1).find(e => e.type === 'meal');
-               if (prevMeal) {
-                  const diffMs = new Date(entry.timestamp) - new Date(prevMeal.timestamp);
-                  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-                  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                  fastDuration = `${hours}h ${minutes}m`;
+               const originalIndex = entries.findIndex(e => e.id === entry.id);
+               if (originalIndex !== -1) {
+                  const prevMeal = entries.slice(originalIndex + 1).find(e => e.type === 'meal');
+                  if (prevMeal) {
+                     const diffMs = new Date(entry.timestamp) - new Date(prevMeal.timestamp);
+                     const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                     fastDuration = `${hours}h ${minutes}m`;
+                  }
                }
             }
             return <TimelineEntry key={entry.id} entry={entry} onDelete={onDeleteEntry} fastDuration={fastDuration} />;
