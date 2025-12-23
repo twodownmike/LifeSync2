@@ -16,6 +16,7 @@ import {
   Calendar,
   Layout
 } from 'lucide-react';
+import { useNotifications } from '../hooks/useNotifications';
 
 const AUDIO_MODES = [
   { id: 'none', label: 'Silent', icon: VolumeX },
@@ -38,6 +39,7 @@ const TASK_TAGS = [
 ];
 
 export default function FocusMode({ onSessionComplete }) {
+  const { requestPermission, sendNotification } = useNotifications();
   const [isActive, setIsActive] = useState(false);
   const [duration, setDuration] = useState(25); // minutes
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -146,8 +148,17 @@ export default function FocusMode({ onSessionComplete }) {
             if (time <= 1) {
                 setIsActive(false);
                 if (onSessionComplete) onSessionComplete(duration, task, selectedTag);
-                const notification = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // Simple chime
-                notification.play().catch(e => console.log("Audio play failed", e));
+                
+                // Play Sound
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audio.play().catch(e => console.log("Audio play failed", e));
+                
+                // Send Notification
+                sendNotification("Focus Session Complete", {
+                    body: `Great job! You focused for ${duration} minutes on ${task || 'your task'}.`,
+                    requireInteraction: true
+                });
+
                 return 0;
             }
             return time - 1;

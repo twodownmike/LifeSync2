@@ -1,0 +1,61 @@
+import { useEffect } from 'react';
+import { ACHIEVEMENTS } from '../lib/constants';
+
+export function useAchievements(entries, userSettings, updateSettings) {
+  useEffect(() => {
+    if (!entries || !userSettings || !updateSettings) return;
+
+    const checkAchievements = () => {
+      const unlocked = new Set(userSettings.unlockedAchievements || []);
+      const newUnlocks = [];
+
+      // Calculate derived stats for checks
+      // Fasting hours calculation (checking all meals)
+      let maxFastHrs = 0;
+      for (let i = 0; i < entries.length - 1; i++) {
+        if (entries[i].type === 'meal') {
+            const prevMeal = entries.slice(i + 1).find(e => e.type === 'meal');
+            if (prevMeal) {
+                const diffMs = new Date(entries[i].timestamp) - new Date(prevMeal.timestamp);
+                const hours = diffMs / (1000 * 60 * 60);
+                if (hours > maxFastHrs && hours < 100) maxFastHrs = hours;
+            }
+        }
+      }
+
+      ACHIEVEMENTS.forEach(achievement => {
+        if (unlocked.has(achievement.id)) return;
+
+        let isUnlocked = false;
+        
+        // Simple "first log" check handled generically if no specific check function
+        if (achievement.id === 'novice_logger' && entries.length > 0) {
+            isUnlocked = true;
+        } 
+        // Use specific check function if available
+        else if (achievement.check) {
+            // We pass entries and extra context (like maxFastHrs)
+            isUnlocked = achievement.check(entries, maxFastHrs);
+        }
+
+        if (isUnlocked) {
+            newUnlocks.push(achievement.id);
+        }
+      });
+
+      if (newUnlocks.length > 0) {
+        // Unlock new achievements
+        const updatedList = [...(userSettings.unlockedAchievements || []), ...newUnlocks];
+        updateSettings({ 
+            ...userSettings, 
+            unlockedAchievements: updatedList 
+        });
+        
+        // Optional: Trigger a toast or sound here?
+        // For now we just save it.
+      }
+    };
+
+    checkAchievements();
+  }, [entries, userSettings.unlockedAchievements]); // Depend on entries updates
+}

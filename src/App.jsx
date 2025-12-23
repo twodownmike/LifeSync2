@@ -13,6 +13,8 @@ import { Button } from './components/UI';
 import { useAuth } from './hooks/useAuth';
 import { useLifeSyncData } from './hooks/useLifeSyncData';
 import { useFasting } from './hooks/useFasting';
+import { useAchievements } from './hooks/useAchievements';
+import { useFastingNotifications } from './hooks/useFastingNotifications';
 
 export default function LifeSync() {
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
@@ -22,6 +24,12 @@ export default function LifeSync() {
   } = useLifeSyncData(user);
   
   const { fastingData, bioPhase, lastMeal } = useFasting(entries, userSettings);
+  
+  // Achievement System
+  useAchievements(entries, userSettings, updateSettings);
+  
+  // Notifications
+  useFastingNotifications(fastingData, userSettings);
   
   // Local UI State
   const [activeTab, setActiveTab] = useState('home');

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { 
-  X, Settings, LogIn, LogOut, Sparkles, Eye, EyeOff 
+  X, Settings, LogIn, LogOut, Sparkles, Eye, EyeOff, Trophy, Lock
 } from 'lucide-react';
 import { Card, Button } from './UI';
+import { ACHIEVEMENTS } from '../lib/constants';
 
 export default function Profile({ 
   user, 
@@ -17,6 +18,7 @@ export default function Profile({
   onClose 
 }) {
   const [showApiKey, setShowApiKey] = useState(false);
+  const unlockedSet = new Set(userSettings.unlockedAchievements || []);
 
   return (
     <div className="space-y-6 pb-24 animate-fade-in">
@@ -63,6 +65,52 @@ export default function Profile({
       </div>
 
       <div className="space-y-6">
+        
+        {/* Achievements Section */}
+        <Card>
+           <div className="flex items-center gap-3 mb-4 text-yellow-500">
+             <Trophy size={20} />
+             <h3 className="font-bold text-white">Achievements</h3>
+             <span className="ml-auto text-xs text-zinc-500 font-mono">
+               {unlockedSet.size} / {ACHIEVEMENTS.length}
+             </span>
+           </div>
+           
+           <div className="grid grid-cols-1 gap-3">
+              {ACHIEVEMENTS.map(achievement => {
+                 const isUnlocked = unlockedSet.has(achievement.id);
+                 const Icon = achievement.icon;
+                 
+                 let tierColor = 'text-zinc-500';
+                 if (isUnlocked) {
+                    if (achievement.tier === 'bronze') tierColor = 'text-orange-400';
+                    if (achievement.tier === 'silver') tierColor = 'text-zinc-300';
+                    if (achievement.tier === 'gold') tierColor = 'text-yellow-400';
+                 }
+
+                 return (
+                    <div 
+                      key={achievement.id}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all
+                        ${isUnlocked 
+                           ? 'bg-zinc-900 border-zinc-800' 
+                           : 'bg-zinc-950 border-zinc-900 opacity-50'}`}
+                    >
+                       <div className={`p-2 rounded-full bg-zinc-950 border border-zinc-900 ${tierColor}`}>
+                          {isUnlocked ? <Icon size={18} /> : <Lock size={18} />}
+                       </div>
+                       <div>
+                          <h4 className={`text-sm font-bold ${isUnlocked ? 'text-zinc-200' : 'text-zinc-600'}`}>
+                             {achievement.title}
+                          </h4>
+                          <p className="text-xs text-zinc-500">{achievement.desc}</p>
+                       </div>
+                    </div>
+                 )
+              })}
+           </div>
+        </Card>
+
         <Card>
           <div className="flex items-center gap-3 mb-4 text-emerald-400">
             <Settings size={20} />
