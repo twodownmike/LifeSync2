@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListChecks, Plus, Activity, CheckCircle, Circle, Trash2, Clock, Wind } from 'lucide-react';
+import { ListChecks, Plus, Activity, CheckCircle, Circle, Trash2, Clock, Wind, Pencil } from 'lucide-react';
 import { TimelineEntry } from './TimelineEntry';
 
 export default function Dashboard({ 
@@ -11,6 +11,7 @@ export default function Dashboard({
   onDeleteEntry, 
   onToggleRoutine, 
   onDeleteRoutine, 
+  onEditRoutine,
   onOpenRoutineModal,
   onOpenGoalModal,
   onOpenInfoModal,
@@ -99,12 +100,20 @@ export default function Dashboard({
                                 {isCompleted ? <CheckCircle size={18} /> : <Circle size={18} />}
                               </div>
                               
-                              <button 
-                                 onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }}
-                                 className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                              >
-                                 <Trash2 size={13} />
-                              </button>
+                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                   onClick={(e) => { e.stopPropagation(); onEditRoutine(routine); }}
+                                   className="text-zinc-600 hover:text-white transition-colors"
+                                >
+                                   <Pencil size={13} />
+                                </button>
+                                <button 
+                                   onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }}
+                                   className="text-zinc-600 hover:text-red-400 transition-colors"
+                                >
+                                   <Trash2 size={13} />
+                                </button>
+                              </div>
                           </div>
                           
                           <div>

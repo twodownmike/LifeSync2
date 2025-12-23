@@ -21,7 +21,7 @@ export default function LifeSync() {
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
   const { 
     entries, routines, userSettings, isSaving, 
-    addEntry, deleteEntry, updateSettings, createRoutine, toggleRoutine, deleteRoutine, setUserSettings 
+    addEntry, deleteEntry, updateSettings, createRoutine, toggleRoutine, updateRoutine, deleteRoutine, setUserSettings 
   } = useLifeSyncData(user);
   
   const { fastingData, bioPhase, lastMeal } = useFasting(entries, userSettings);
@@ -61,6 +61,7 @@ export default function LifeSync() {
   const [routineTitle, setRoutineTitle] = useState('');
   const [routineType, setRoutineType] = useState('mindset');
   const [routineDays, setRoutineDays] = useState([]);
+  const [editingRoutineId, setEditingRoutineId] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('lifesync_openai_key', apiKey);
@@ -105,15 +106,31 @@ export default function LifeSync() {
   };
 
   const handleSaveRoutine = async () => {
-    await createRoutine({
+    const routineData = {
         title: routineTitle,
         type: routineType,
         days: routineDays.length > 0 ? routineDays : [0,1,2,3,4,5,6]
-    });
+    };
+
+    if (editingRoutineId) {
+        await updateRoutine(editingRoutineId, routineData);
+    } else {
+        await createRoutine(routineData);
+    }
+
     setIsRoutineModalOpen(false);
     setRoutineTitle('');
     setRoutineDays([]);
     setRoutineType('mindset');
+    setEditingRoutineId(null);
+  };
+
+  const handleEditRoutine = (routine) => {
+    setEditingRoutineId(routine.id);
+    setRoutineTitle(routine.title);
+    setRoutineType(routine.type);
+    setRoutineDays(routine.days || []);
+    setIsRoutineModalOpen(true);
   };
 
   const toggleDay = (dayIdx) => {
@@ -182,6 +199,7 @@ export default function LifeSync() {
                 onDeleteEntry={deleteEntry}
                 onToggleRoutine={toggleRoutine}
                 onDeleteRoutine={deleteRoutine}
+                onEditRoutine={handleEditRoutine}
                 onOpenRoutineModal={() => setIsRoutineModalOpen(true)}
                 onOpenGoalModal={() => { setTempGoal(userSettings.fastingGoal); setIsGoalModalOpen(true); }}
                 onOpenInfoModal={() => setIsInfoModalOpen(true)}
@@ -460,7 +478,7 @@ export default function LifeSync() {
         {isRoutineModalOpen && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
              <div className="bg-zinc-900 w-full max-w-sm rounded-3xl border border-zinc-800 p-6 animate-slide-up shadow-2xl">
-                <h3 className="text-lg font-bold text-white mb-6">Create Routine</h3>
+                <h3 className="text-lg font-bold text-white mb-6">{editingRoutineId ? 'Edit Routine' : 'Create Routine'}</h3>
                 <div className="space-y-4">
                    <div>
                       <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Title</label>
@@ -513,9 +531,15 @@ export default function LifeSync() {
                    </div>
 
                    <Button onClick={handleSaveRoutine} disabled={isSaving} className="w-full mt-2">
-                     {isSaving ? 'Creating...' : 'Create Routine'}
+                     {isSaving ? 'Saving...' : (editingRoutineId ? 'Update Routine' : 'Create Routine')}
                    </Button>
-                   <Button variant="ghost" onClick={() => setIsRoutineModalOpen(false)} className="w-full">
+                   <Button variant="ghost" onClick={() => {
+                     setIsRoutineModalOpen(false);
+                     setEditingRoutineId(null);
+                     setRoutineTitle('');
+                     setRoutineDays([]);
+                     setRoutineType('mindset');
+                   }} className="w-full">
                      Cancel
                    </Button>
                 </div>

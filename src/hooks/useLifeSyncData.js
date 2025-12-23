@@ -152,6 +152,19 @@ export function useLifeSyncData(user) {
     }
   };
 
+  const updateRoutine = async (id, updates) => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'routines', id), updates);
+    } catch (err) {
+      console.error("Error updating routine:", err);
+      throw err;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const deleteRoutine = async (id) => {
     if (!user) return;
     try {
@@ -172,6 +185,7 @@ export function useLifeSyncData(user) {
     updateSettings,
     createRoutine,
     toggleRoutine,
+    updateRoutine,
     deleteRoutine,
     setUserSettings // Exporting setter for local form state updates if needed, though updateSettings handles sync
   };
