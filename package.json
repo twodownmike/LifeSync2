@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://twodownmike.github.io/LifeSync2/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Utensils, Dumbbell, BookOpen, Clock, 
-  TrendingUp, Home, X, User, Sparkles, Brain, Zap
+  TrendingUp, Home, X, User, Sparkles, Brain, Zap, Minus
 } from 'lucide-react';
 import FocusMode from './components/FocusMode';
 import Profile from './components/Profile';

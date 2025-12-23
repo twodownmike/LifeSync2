@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ListChecks, Plus, Activity, CheckCircle, Circle, Trash2, Clock, Filter } from 'lucide-react';
+import { ListChecks, Plus, Activity, CheckCircle, Circle, Trash2, Clock } from 'lucide-react';
 import { TimelineEntry } from './TimelineEntry';
 
 export default function Dashboard({ 
