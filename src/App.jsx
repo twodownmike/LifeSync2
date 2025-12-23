@@ -255,14 +255,13 @@ export default function LifeSync() {
         )}
 
         {/* Navigation Bar */}
-        <nav className="h-20 bg-zinc-950 border-t border-zinc-900 flex items-center justify-around px-2 pb-4 z-20">
+        <nav className="h-20 bg-zinc-950 border-t border-zinc-900 flex items-center justify-between px-6 pb-4 z-20">
            <button onClick={() => setActiveTab('home')} className={`p-3 rounded-2xl transition-all ${activeTab === 'home' ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
               <Home size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
            </button>
            <button onClick={() => setActiveTab('fasting')} className={`p-3 rounded-2xl transition-all ${activeTab === 'fasting' ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
               <Clock size={24} strokeWidth={activeTab === 'fasting' ? 2.5 : 2} />
            </button>
-           <div className="w-12"></div> {/* Spacer for FAB */}
            <button onClick={() => setActiveTab('focus')} className={`p-3 rounded-2xl transition-all ${activeTab === 'focus' ? 'text-cyan-400 bg-cyan-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
               <Brain size={24} strokeWidth={activeTab === 'focus' ? 2.5 : 2} />
            </button>
