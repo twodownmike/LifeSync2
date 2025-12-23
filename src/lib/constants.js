@@ -167,7 +167,7 @@ export const ACHIEVEMENTS = [
     id: 'monk_mode',
     title: 'Monk Mode',
     desc: 'Complete 20 Breathwork sessions.',
-    icon: Droplets,
+    icon: Wind,
     tier: 'gold',
     check: (entries) => entries.filter(e => e.type === 'breathwork').length >= 20
   },
