@@ -110,10 +110,29 @@ export default function Profile({
              
              const Icon = achievement.icon;
              let tierColor = 'text-zinc-600';
+             let tierBg = 'bg-zinc-950 border-zinc-900';
+             
              if (isUnlocked) {
-                if (achievement.tier === 'bronze') tierColor = 'text-orange-400';
-                if (achievement.tier === 'silver') tierColor = 'text-zinc-300';
-                if (achievement.tier === 'gold') tierColor = 'text-yellow-400';
+                if (achievement.tier === 'bronze') {
+                    tierColor = 'text-orange-400';
+                    tierBg = 'bg-orange-950/30 border-orange-500/20';
+                }
+                if (achievement.tier === 'silver') {
+                    tierColor = 'text-zinc-300';
+                    tierBg = 'bg-zinc-800/50 border-zinc-700/50';
+                }
+                if (achievement.tier === 'gold') {
+                    tierColor = 'text-yellow-400';
+                    tierBg = 'bg-yellow-950/30 border-yellow-500/20';
+                }
+                if (achievement.tier === 'platinum') {
+                    tierColor = 'text-cyan-400';
+                    tierBg = 'bg-cyan-950/30 border-cyan-500/20';
+                }
+                if (achievement.tier === 'diamond') {
+                    tierColor = 'text-indigo-400';
+                    tierBg = 'bg-indigo-950/30 border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.2)]';
+                }
              }
 
              return (
@@ -124,16 +143,22 @@ export default function Profile({
                        ? 'bg-zinc-900 border-zinc-800' 
                        : 'bg-zinc-950/30 border-zinc-900/50 opacity-60 grayscale'}`}
                 >
-                   <div className={`p-2 rounded-full bg-zinc-950 border border-zinc-900 ${tierColor}`}>
+                   <div className={`p-2 rounded-full border ${tierBg} ${tierColor}`}>
                       {isUnlocked ? <Icon size={16} /> : <Lock size={16} />}
                    </div>
                    <div className="flex-1 min-w-0">
-                      <h4 className={`text-sm font-bold truncate ${isUnlocked ? 'text-zinc-200' : 'text-zinc-600'}`}>
-                         {achievement.title}
-                      </h4>
+                      <div className="flex justify-between items-center mb-0.5">
+                          <h4 className={`text-sm font-bold truncate ${isUnlocked ? 'text-zinc-200' : 'text-zinc-600'}`}>
+                             {achievement.title}
+                          </h4>
+                          {isUnlocked && (
+                              <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${tierBg} ${tierColor}`}>
+                                  {achievement.tier}
+                              </span>
+                          )}
+                      </div>
                       <p className="text-xs text-zinc-500 truncate">{achievement.desc}</p>
                    </div>
-                   {isUnlocked && <div className="text-emerald-500"><Sparkles size={12} /></div>}
                 </div>
              )
           })}

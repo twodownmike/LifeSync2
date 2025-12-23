@@ -31,12 +31,8 @@ export function useAchievements(entries, userSettings, updateSettings) {
 
         let isUnlocked = false;
         
-        // Simple "first log" check handled generically if no specific check function
-        if (achievement.id === 'novice_logger' && entries.length > 0) {
-            isUnlocked = true;
-        } 
         // Use specific check function if available
-        else if (achievement.check) {
+        if (achievement.check) {
             // We pass entries and extra context (like maxFastHrs)
             isUnlocked = achievement.check(entries, maxFastHrs);
         }
