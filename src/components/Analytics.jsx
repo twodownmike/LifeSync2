@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { Flame, Clock, Dumbbell, BookOpen, Activity, Zap } from 'lucide-react';
+import { Flame, Clock, Dumbbell, BookOpen, Activity, Zap, Smile, Tag } from 'lucide-react';
 import { Card } from './UI';
 import { calculateStreak } from '../lib/constants';
-import { ActivityBarChart, FastingTrendChart, StatCard, ActivityHeatmap } from './AnalyticsCharts';
+import { ActivityBarChart, FastingTrendChart, StatCard, ActivityHeatmap, MoodTrendChart, TagDistributionChart } from './AnalyticsCharts';
 
 export default function Analytics({ entries }) {
   // --- Data Processing ---
@@ -81,6 +81,37 @@ export default function Analytics({ entries }) {
     return days;
   }, [entries]);
 
+  // 5. Mood Trends (Last 14 entries with mood/energy)
+  const moodTrends = useMemo(() => {
+      return entries
+        .filter(e => e.mood !== undefined && e.energy !== undefined)
+        .slice(0, 14)
+        .reverse()
+        .map(e => ({
+            date: new Date(e.timestamp).toLocaleDateString(undefined, {month:'numeric', day:'numeric'}),
+            mood: e.mood,
+            energy: e.energy
+        }));
+  }, [entries]);
+
+  // 6. Tag Distribution
+  const tagDistribution = useMemo(() => {
+      const counts = {};
+      entries.forEach(e => {
+          if (e.tags) {
+              e.tags.forEach(t => {
+                  const tag = t.toLowerCase().trim();
+                  counts[tag] = (counts[tag] || 0) + 1;
+              });
+          }
+      });
+      
+      return Object.entries(counts)
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8); // Top 8
+  }, [entries]);
+
   const streak = calculateStreak(entries);
 
   return (
@@ -139,6 +170,15 @@ export default function Analytics({ entries }) {
          <FastingTrendChart data={fastingAnalysis.trends} goal={16} />
       </Card>
 
+      {/* Mood & Energy Trends */}
+      <Card>
+         <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+            <Smile size={18} className="text-zinc-400" />
+            Mood & Energy
+         </h3>
+         <MoodTrendChart data={moodTrends} />
+      </Card>
+
       {/* Weekly Activity */}
       <Card>
          <h3 className="font-bold text-white mb-4 flex items-center gap-2">
@@ -148,14 +188,25 @@ export default function Analytics({ entries }) {
          <ActivityBarChart data={weeklyActivity} />
       </Card>
 
-      {/* Consistency Heatmap */}
-      <Card>
-         <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-           <Activity size={18} className="text-zinc-400" />
-           Consistency (Last 28 Days)
-         </h3>
-         <ActivityHeatmap entries={entries} />
-      </Card>
+      {/* Tag Distribution */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+              <Tag size={18} className="text-zinc-400" />
+              Top Tags
+           </h3>
+           <TagDistributionChart data={tagDistribution} />
+        </Card>
+
+        {/* Consistency Heatmap */}
+        <Card>
+           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+             <Activity size={18} className="text-zinc-400" />
+             Consistency
+           </h3>
+           <ActivityHeatmap entries={entries} />
+        </Card>
+      </div>
     </div>
   );
 }

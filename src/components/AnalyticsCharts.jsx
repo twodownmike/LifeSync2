@@ -202,3 +202,104 @@ export const ActivityHeatmap = ({ entries }) => {
       </div>
    );
 };
+
+export const MoodTrendChart = ({ data }) => {
+  if (!data || data.length === 0) return <div className="h-40 flex items-center justify-center text-zinc-600 text-xs">No Data</div>;
+
+  // Scales
+  const getY = (val) => 100 - (val * 10); // 0-10 scale mapped to 100-0%
+  
+  const moodPoints = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 100;
+    const y = getY(d.mood);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const energyPoints = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 100;
+    const y = getY(d.energy);
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <div className="w-full h-48 select-none relative">
+       <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-zinc-600 font-mono pb-6 pl-1">
+          <span>10</span>
+          <span>5</span>
+          <span>0</span>
+       </div>
+       
+       <div className="w-full h-full pb-6 pl-6 pr-4 relative">
+          <div className="w-full h-full border-l border-b border-zinc-800 relative">
+             <div className="absolute top-1/2 w-full border-t border-dashed border-zinc-800/50"></div>
+             
+             <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+                {/* Mood Line */}
+                <polyline 
+                   points={moodPoints} 
+                   fill="none" 
+                   stroke="#8b5cf6" // Violet
+                   strokeWidth="2" 
+                   vectorEffect="non-scaling-stroke"
+                   className="opacity-80"
+                />
+                {/* Energy Line */}
+                <polyline 
+                   points={energyPoints} 
+                   fill="none" 
+                   stroke="#eab308" // Yellow
+                   strokeWidth="2" 
+                   vectorEffect="non-scaling-stroke"
+                   className="opacity-80"
+                />
+
+                {/* Points */}
+                {data.map((d, i) => (
+                   <g key={i}>
+                     <circle cx={(i / (data.length - 1)) * 100} cy={getY(d.mood)} r="2" className="fill-zinc-950 stroke-violet-500 stroke-2" />
+                     <circle cx={(i / (data.length - 1)) * 100} cy={getY(d.energy)} r="2" className="fill-zinc-950 stroke-yellow-500 stroke-2" />
+                   </g>
+                ))}
+             </svg>
+          </div>
+
+          <div className="flex justify-between mt-2 text-[10px] text-zinc-500 font-mono">
+             {data.map((d, i) => (
+                <div key={i} className={`${i % 3 !== 0 ? 'hidden' : 'block'}`}>
+                   {d.date}
+                </div>
+             ))}
+          </div>
+       </div>
+
+       {/* Legend */}
+       <div className="absolute top-0 right-0 flex gap-3 text-[10px] font-bold">
+          <div className="flex items-center gap-1 text-violet-400"><div className="w-2 h-2 rounded-full bg-violet-500"></div> Mood</div>
+          <div className="flex items-center gap-1 text-yellow-500"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> Energy</div>
+       </div>
+    </div>
+  );
+};
+
+export const TagDistributionChart = ({ data }) => {
+  if (!data || data.length === 0) return <div className="h-40 flex items-center justify-center text-zinc-600 text-xs">No Data</div>;
+
+  const maxVal = Math.max(...data.map(d => d.count));
+
+  return (
+    <div className="space-y-3 pt-2">
+       {data.map((item, i) => (
+          <div key={i} className="flex items-center gap-3">
+             <div className="w-24 text-xs text-zinc-400 truncate text-right font-medium">{item.tag}</div>
+             <div className="flex-1 h-2 bg-zinc-900 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-500/50 rounded-full"
+                  style={{ width: `${(item.count / maxVal) * 100}%` }}
+                ></div>
+             </div>
+             <div className="w-8 text-xs text-zinc-500 font-mono">{item.count}</div>
+          </div>
+       ))}
+    </div>
+  );
+};
