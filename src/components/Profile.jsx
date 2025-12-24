@@ -83,7 +83,7 @@ export default function Profile({
               <Ruler size={12} /> Height
             </div>
             <div className="text-lg font-mono font-bold text-zinc-200">
-              {userSettings.height || '--'} <span className="text-xs text-zinc-600 font-sans">cm</span>
+              {userSettings.heightFt ? `${userSettings.heightFt}'${userSettings.heightIn || 0}"` : '--'}
             </div>
           </div>
           <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
@@ -91,7 +91,7 @@ export default function Profile({
               <Scale size={12} /> Weight
             </div>
             <div className="text-lg font-mono font-bold text-zinc-200">
-              {userSettings.weight || '--'} <span className="text-xs text-zinc-600 font-sans">kg</span>
+              {userSettings.weight || '--'} <span className="text-xs text-zinc-600 font-sans">lbs</span>
             </div>
           </div>
           <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
@@ -301,23 +301,32 @@ export default function Profile({
 
           <div className="grid grid-cols-2 gap-4">
              <div>
-               <label className="text-xs text-zinc-400 mb-1.5 block">Height (cm)</label>
-               <input 
-                 type="number" 
-                 value={userSettings.height || ''}
-                 onChange={(e) => setUserSettings({...userSettings, height: e.target.value})}
-                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 text-sm"
-                 placeholder="175"
-               />
+               <label className="text-xs text-zinc-400 mb-1.5 block">Height</label>
+               <div className="flex gap-2">
+                 <input 
+                   type="number" 
+                   placeholder="Ft"
+                   value={userSettings.heightFt || ''}
+                   onChange={(e) => setUserSettings({...userSettings, heightFt: e.target.value})}
+                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-emerald-500 text-sm"
+                 />
+                 <input 
+                   type="number" 
+                   placeholder="In"
+                   value={userSettings.heightIn || ''}
+                   onChange={(e) => setUserSettings({...userSettings, heightIn: e.target.value})}
+                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-emerald-500 text-sm"
+                 />
+               </div>
              </div>
              <div>
-               <label className="text-xs text-zinc-400 mb-1.5 block">Weight (kg)</label>
+               <label className="text-xs text-zinc-400 mb-1.5 block">Weight (lbs)</label>
                <input 
                  type="number" 
                  value={userSettings.weight || ''}
                  onChange={(e) => setUserSettings({...userSettings, weight: e.target.value})}
                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 text-sm"
-                 placeholder="70"
+                 placeholder="165"
                />
              </div>
           </div>

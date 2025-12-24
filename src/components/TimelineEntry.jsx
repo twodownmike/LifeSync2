@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronDown, Trash2, Scale } from 'lucide-react';
 
 export const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -11,7 +11,8 @@ export const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
         ${entry.type === 'meal' ? 'bg-orange-400' : 
           entry.type === 'workout' ? 'bg-emerald-400' : 
           entry.type === 'work_session' ? 'bg-cyan-400' : 
-          entry.type === 'breathwork' ? 'bg-sky-400' : 'bg-violet-400'}`} 
+          entry.type === 'breathwork' ? 'bg-sky-400' : 
+          entry.type === 'weight' ? 'bg-blue-500' : 'bg-violet-400'}`} 
       />
       
       <div 
@@ -41,6 +42,7 @@ export const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
                )}
              </div>
              <h3 className="text-lg font-semibold text-zinc-200 group-hover:text-white transition-colors flex items-center gap-2">
+                {entry.type === 'weight' && <Scale size={18} className="text-blue-500" />}
                 {entry.title}
              </h3>
            </div>
@@ -51,6 +53,13 @@ export const TimelineEntry = ({ entry, onDelete, fastDuration }) => {
 
         {isExpanded && (
           <div className="mt-3 animate-fade-in border-l-2 border-zinc-800 pl-3 ml-1 mb-6">
+
+             {/* Weight Specific Detail */}
+             {entry.type === 'weight' && entry.weight && (
+                 <div className="text-2xl font-mono font-bold text-blue-400 mb-3">
+                    {entry.weight} <span className="text-sm text-zinc-500 font-sans">lbs</span>
+                 </div>
+             )}
 
              {/* Mood & Energy */}
              {(entry.mood || entry.energy) && (

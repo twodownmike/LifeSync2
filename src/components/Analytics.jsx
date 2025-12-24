@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { Flame, Clock, Dumbbell, BookOpen, Activity, Zap, Smile, Tag } from 'lucide-react';
+import { Flame, Clock, Dumbbell, BookOpen, Activity, Zap, Smile, Tag, Scale } from 'lucide-react';
 import { Card } from './UI';
 import { calculateStreak } from '../lib/constants';
-import { ActivityBarChart, FastingTrendChart, StatCard, ActivityHeatmap, MoodTrendChart, TagDistributionChart } from './AnalyticsCharts';
+import { ActivityBarChart, FastingTrendChart, StatCard, ActivityHeatmap, MoodTrendChart, TagDistributionChart, WeightChart } from './AnalyticsCharts';
 
 export default function Analytics({ entries }) {
   // --- Data Processing ---
@@ -112,6 +112,18 @@ export default function Analytics({ entries }) {
         .slice(0, 8); // Top 8
   }, [entries]);
 
+  // 7. Weight Trends
+  const weightTrends = useMemo(() => {
+     return entries
+       .filter(e => e.type === 'weight' && e.weight)
+       .slice(0, 20) // Last 20 weigh-ins
+       .reverse()
+       .map(e => ({
+           date: new Date(e.timestamp).toLocaleDateString(undefined, {month:'numeric', day:'numeric'}),
+           value: e.weight
+       }));
+  }, [entries]);
+
   const streak = calculateStreak(entries);
 
   return (
@@ -157,6 +169,17 @@ export default function Analytics({ entries }) {
       </div>
 
       {/* Charts Section */}
+
+      {/* Weight Trends */}
+      {weightTrends.length > 0 && (
+          <Card>
+             <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                <Scale size={18} className="text-zinc-400" />
+                Weight Trends
+             </h3>
+             <WeightChart data={weightTrends} />
+          </Card>
+      )}
       
       {/* Fasting Trends */}
       <Card>

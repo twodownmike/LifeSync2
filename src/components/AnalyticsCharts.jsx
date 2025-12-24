@@ -303,3 +303,71 @@ export const TagDistributionChart = ({ data }) => {
     </div>
   );
 };
+
+export const WeightChart = ({ data }) => {
+  if (!data || data.length === 0) return <div className="h-40 flex items-center justify-center text-zinc-600 text-xs">No Data</div>;
+
+  const weights = data.map(d => d.value);
+  const minW = Math.min(...weights) - 5;
+  const maxW = Math.max(...weights) + 5;
+  const range = maxW - minW;
+
+  const getY = (val) => 100 - ((val - minW) / range) * 100;
+  
+  const points = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 100;
+    const y = getY(d.value);
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <div className="w-full h-48 select-none relative">
+       <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-zinc-600 font-mono pb-6 pl-1">
+          <span>{maxW.toFixed(0)}</span>
+          <span>{minW.toFixed(0)}</span>
+       </div>
+       
+       <div className="w-full h-full pb-6 pl-8 pr-4 relative">
+          <div className="w-full h-full border-l border-b border-zinc-800 relative">
+             <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+                <polyline 
+                   points={points} 
+                   fill="none" 
+                   stroke="#3b82f6" // Blue-500
+                   strokeWidth="2" 
+                   vectorEffect="non-scaling-stroke"
+                />
+                <defs>
+                   <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.2" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                   </linearGradient>
+                </defs>
+                <path 
+                   d={`M0,100 L0,${getY(data[0].value)} ${points.split(' ').map(p => `L${p}`).join(' ')} L100,${getY(data[data.length-1].value)} L100,100 Z`}
+                   fill="url(#weightGradient)"
+                />
+                
+                {data.map((d, i) => (
+                   <circle 
+                      key={i}
+                      cx={(i / (data.length - 1)) * 100} 
+                      cy={getY(d.value)} 
+                      r="2" 
+                      className="fill-zinc-950 stroke-blue-500 stroke-2" 
+                   />
+                ))}
+             </svg>
+          </div>
+
+          <div className="flex justify-between mt-2 text-[10px] text-zinc-500 font-mono">
+             {data.map((d, i) => (
+                <div key={i} className={`${i % Math.ceil(data.length/5) !== 0 ? 'hidden' : 'block'}`}>
+                   {d.date}
+                </div>
+             ))}
+          </div>
+       </div>
+    </div>
+  );
+};

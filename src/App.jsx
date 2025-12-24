@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Utensils, Dumbbell, BookOpen, Clock, 
-  TrendingUp, Home, X, User, Sparkles, Brain, Zap, Minus
+  TrendingUp, Home, X, User, Sparkles, Brain, Zap, Minus, Scale
 } from 'lucide-react';
 import FocusMode from './components/FocusMode';
 import Profile from './components/Profile';
@@ -98,16 +98,31 @@ export default function LifeSync() {
   };
 
   const handleSaveEntry = async () => {
-    await addEntry({
+    let entryData = {
         type: modalType,
-        title: title || (modalType === 'meal' ? 'Quick Meal' : modalType === 'workout' ? 'Workout' : 'Journal Entry'),
-        note,
+        title: title || (
+            modalType === 'meal' ? 'Quick Meal' : 
+            modalType === 'workout' ? 'Workout' : 
+            modalType === 'weight' ? 'Weight Log' :
+            'Journal Entry'
+        ),
+        note: modalType === 'weight' ? '' : note, // Clear note for weight types (we used it for input)
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         timestamp: new Date(entryTime).toISOString(),
         mood,
-        energy,
-        ...(modalType === 'workout' && { exercises: exercises }) 
-    });
+        energy
+    };
+
+    if (modalType === 'workout') {
+        entryData.exercises = exercises;
+    }
+    
+    if (modalType === 'weight') {
+        entryData.weight = parseFloat(note); // Capture the weight value
+        entryData.title = `${note} lbs`; // Set title for easy viewing
+    }
+
+    await addEntry(entryData);
     closeModal();
   };
 
@@ -297,6 +312,12 @@ export default function LifeSync() {
                       <BookOpen size={20} />
                    </button>
                 </div>
+                <div className="flex items-center gap-3 animate-slide-up" style={{animationDelay: '150ms'}}>
+                   <span className="text-zinc-200 font-medium text-sm bg-zinc-900 px-2 py-1 rounded-md">Weigh In</span>
+                   <button onClick={(e) => { e.stopPropagation(); openModal('weight'); }} className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                      <Scale size={20} />
+                   </button>
+                </div>
                 <button onClick={() => setIsTypeSelectorOpen(false)} className="w-14 h-14 mt-2 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:rotate-90 transition-all">
                    <X size={24} />
                 </button>
@@ -354,7 +375,25 @@ export default function LifeSync() {
                       />
                    </div>
 
-                   {/* Workout Builder */}
+                   {/* Weight Input (Only for weight type) */}
+                   {modalType === 'weight' && (
+                      <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800 mb-4">
+                         <div className="flex items-center gap-3 justify-center">
+                            <Scale size={24} className="text-blue-500" />
+                            <input 
+                              type="number" 
+                              autoFocus
+                              placeholder="0.0" 
+                              value={note} 
+                              onChange={(e) => setNote(e.target.value)}
+                              className="w-32 bg-transparent text-4xl font-mono font-bold text-center text-white focus:outline-none border-b-2 border-zinc-800 focus:border-blue-500 placeholder:text-zinc-800"
+                            />
+                            <span className="text-xl font-bold text-zinc-600 mt-2">lbs</span>
+                         </div>
+                      </div>
+                   )}
+
+                   {/* Workout Builder (Only for workout type) */}
                    {modalType === 'workout' && (
                      <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800">
                         <label className="text-xs text-zinc-500 font-bold uppercase mb-2 block">Exercises</label>
