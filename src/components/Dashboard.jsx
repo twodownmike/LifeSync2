@@ -64,7 +64,7 @@ export default function Dashboard({
   });
 
   return (
-    <div className="space-y-8 pb-24 animate-fade-in">
+    <div className="space-y-8 pb-24 md:pb-8 animate-fade-in">
       
       {/* Header Section */}
       <div className="flex justify-between items-start">
@@ -94,7 +94,7 @@ export default function Dashboard({
       </div>
 
       {/* Daily Vitals Grid */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 md:gap-6">
           <div className="bg-zinc-900/50 border border-zinc-800 p-3 rounded-2xl flex flex-col items-center justify-center gap-1">
              <div className="text-orange-500 mb-1"><Flame size={18} fill="currentColor" className="opacity-20" /></div>
              <div className="text-xl font-bold text-white font-mono">{vitals.streak}</div>
@@ -115,7 +115,7 @@ export default function Dashboard({
       {/* Fast Timer Widget (Featured) */}
       <div 
         onClick={onOpenGoalModal}
-        className="relative overflow-hidden rounded-3xl bg-zinc-900 border border-zinc-800 p-6 cursor-pointer group transition-all hover:border-zinc-700"
+        className="relative overflow-hidden rounded-3xl bg-zinc-900 border border-zinc-800 p-6 cursor-pointer group transition-all hover:border-zinc-700 md:p-8"
       >
          {/* Background Pulse for High States */}
          {(fastingData.hours >= 16) && (

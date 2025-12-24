@@ -127,7 +127,7 @@ export default function Analytics({ entries }) {
   const streak = calculateStreak(entries);
 
   return (
-    <div className="space-y-6 pb-24 animate-fade-in">
+    <div className="space-y-6 pb-24 md:pb-8 animate-fade-in">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-2xl font-bold text-white">Analytics</h2>
         <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800">
@@ -137,7 +137,7 @@ export default function Analytics({ entries }) {
       </div>
       
       {/* Primary Stats Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
          <StatCard 
             icon={Clock} 
             label="Avg Fast" 

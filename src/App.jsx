@@ -10,6 +10,7 @@ import Coach from './components/Coach';
 import FastingTimer from './components/FastingTimer';
 import Dashboard from './components/Dashboard';
 import Breathwork from './components/Breathwork';
+import Sidebar from './components/Sidebar';
 import { Button } from './components/UI';
 import { useAuth } from './hooks/useAuth';
 import { useLifeSyncData } from './hooks/useLifeSyncData';
@@ -204,11 +205,21 @@ export default function LifeSync() {
   if (authLoading) return <div className="h-screen w-full bg-black flex items-center justify-center text-zinc-500">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-black text-zinc-200 font-sans selection:bg-emerald-500/30">
-      <div className="max-w-md mx-auto h-screen flex flex-col relative bg-zinc-950 shadow-2xl overflow-hidden">
+    <div className="min-h-screen bg-black text-zinc-200 font-sans selection:bg-emerald-500/30 flex justify-center md:justify-start">
+      
+      {/* Desktop Sidebar */}
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onSignOut={logout}
+        userPhoto={user?.photoURL}
+        userName={userSettings.displayName}
+      />
+
+      <div className="w-full max-w-md md:max-w-none md:flex-1 h-screen flex flex-col relative bg-zinc-950 shadow-2xl md:shadow-none md:bg-black overflow-hidden transition-all">
         
-        {/* Header */}
-        <header className="px-6 pt-12 pb-4 flex items-center justify-between z-10 bg-gradient-to-b from-black to-transparent">
+        {/* Header (Mobile Only) */}
+        <header className="md:hidden px-6 pt-12 pb-4 flex items-center justify-between z-10 bg-gradient-to-b from-black to-transparent">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(16,185,129,0.5)]">
                <Zap className="text-black fill-current" size={20} />
@@ -221,7 +232,7 @@ export default function LifeSync() {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-y-auto px-6 scrollbar-hide relative">
+        <main className="flex-1 overflow-y-auto px-6 scrollbar-hide relative md:px-12 md:py-10 max-w-7xl mx-auto w-full">
            {activeTab === 'home' && (
              <Dashboard 
                 userSettings={userSettings}
@@ -284,7 +295,7 @@ export default function LifeSync() {
         {!isTypeSelectorOpen && activeTab !== 'focus' && activeTab !== 'profile' && (
           <button 
             onClick={() => setIsTypeSelectorOpen(true)}
-            className="absolute bottom-24 right-6 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-zinc-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:scale-105 active:scale-95 transition-all z-20"
+            className="absolute bottom-24 right-6 md:bottom-10 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-zinc-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:scale-105 active:scale-95 transition-all z-20"
           >
             <Plus size={28} />
           </button>
@@ -293,7 +304,7 @@ export default function LifeSync() {
         {/* Type Selector Overlay */}
         {isTypeSelectorOpen && (
           <div className="absolute inset-0 z-30 bg-black/60 backdrop-blur-sm flex items-end justify-end p-6 animate-fade-in" onClick={() => setIsTypeSelectorOpen(false)}>
-             <div className="flex flex-col gap-3 items-end mb-20">
+             <div className="flex flex-col gap-3 items-end mb-20 md:mb-10">
                 <div className="flex items-center gap-3 animate-slide-up" style={{animationDelay: '0ms'}}>
                    <span className="text-zinc-200 font-medium text-sm bg-zinc-900 px-2 py-1 rounded-md">Log Meal</span>
                    <button onClick={(e) => { e.stopPropagation(); openModal('meal'); }} className="w-12 h-12 rounded-full bg-orange-500 text-black flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
@@ -325,8 +336,8 @@ export default function LifeSync() {
           </div>
         )}
 
-        {/* Navigation Bar */}
-        <nav className="h-20 bg-zinc-950 border-t border-zinc-900 flex items-center justify-around px-2 pb-4 z-20">
+        {/* Navigation Bar (Mobile Only) */}
+        <nav className="md:hidden h-20 bg-zinc-950 border-t border-zinc-900 flex items-center justify-around px-2 pb-4 z-20">
            <button onClick={() => setActiveTab('home')} className={`p-3 rounded-2xl transition-all ${activeTab === 'home' ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
               <Home size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
            </button>

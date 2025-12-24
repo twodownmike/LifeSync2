@@ -429,7 +429,7 @@ export default function Profile({
   );
 
   return (
-    <div className="animate-fade-in flex flex-col h-full pb-20">
+    <div className="animate-fade-in flex flex-col h-full pb-20 md:pb-0">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-4">
