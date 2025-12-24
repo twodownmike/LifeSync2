@@ -261,7 +261,13 @@ export default function LifeSync() {
              />
            )}
            {activeTab === 'focus' && <FocusMode onSessionComplete={handleFocusSessionComplete} />}
-           {activeTab === 'analytics' && <Analytics entries={entries} />}
+           {activeTab === 'analytics' && (
+             <Analytics 
+                entries={entries} 
+                apiKey={apiKey}
+                userSettings={userSettings}
+             />
+           )}
            {activeTab === 'coach' && (
              <Coach 
                user={user} 

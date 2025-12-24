@@ -1,10 +1,14 @@
-import React, { useMemo } from 'react';
-import { Flame, Clock, Dumbbell, BookOpen, Activity, Zap, Smile, Tag, Scale } from 'lucide-react';
-import { Card } from './UI';
+import React, { useMemo, useState } from 'react';
+import { Flame, Clock, Dumbbell, BookOpen, Activity, Zap, Smile, Tag, Scale, Sparkles, X, Loader2 } from 'lucide-react';
+import { Card, Button } from './UI';
 import { calculateStreak } from '../lib/constants';
 import { ActivityBarChart, FastingTrendChart, StatCard, ActivityHeatmap, MoodTrendChart, TagDistributionChart, WeightChart } from './AnalyticsCharts';
+import { useAnalyticsAI } from '../hooks/useAnalyticsAI';
+import { MarkdownText } from './MarkdownText';
 
-export default function Analytics({ entries }) {
+export default function Analytics({ entries, apiKey, userSettings }) {
+  const [showAnalysis, setShowAnalysis] = useState(false);
+
   // --- Data Processing ---
   
   // 1. General Counts
@@ -126,13 +130,38 @@ export default function Analytics({ entries }) {
 
   const streak = calculateStreak(entries);
 
+  // AI Analysis Hook
+  const { analysis, loading: aiLoading, error: aiError, generateAnalysis } = useAnalyticsAI(
+      apiKey, 
+      userSettings, 
+      entries, 
+      fastingAnalysis, 
+      focusStats, 
+      weeklyActivity, 
+      weightTrends
+  );
+
+  const handleAnalyze = () => {
+      if (!analysis) generateAnalysis();
+      setShowAnalysis(true);
+  };
+
   return (
-    <div className="space-y-6 pb-24 md:pb-8 animate-fade-in">
+    <div className="space-y-6 pb-24 md:pb-8 animate-fade-in relative">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-2xl font-bold text-white">Analytics</h2>
-        <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800">
-             <Flame size={14} className="text-orange-500 fill-orange-500/20" />
-             <span className="text-sm font-bold text-white">{streak} Day Streak</span>
+        <div className="flex items-center gap-3">
+            <button 
+                onClick={handleAnalyze}
+                className="flex items-center gap-2 px-3 py-1 bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 rounded-full border border-violet-500/50 transition-colors text-xs font-bold uppercase tracking-wide"
+            >
+                <Sparkles size={12} />
+                AI Analyze
+            </button>
+            <div className="flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800">
+                 <Flame size={14} className="text-orange-500 fill-orange-500/20" />
+                 <span className="text-sm font-bold text-white">{streak} Day Streak</span>
+            </div>
         </div>
       </div>
       
@@ -233,6 +262,47 @@ export default function Analytics({ entries }) {
            <ActivityHeatmap entries={entries} />
         </Card>
       </div>
+
+      {/* AI Analysis Modal */}
+      {showAnalysis && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+           <div className="bg-zinc-900 w-full max-w-2xl rounded-3xl border border-zinc-800 flex flex-col max-h-[85vh] shadow-2xl animate-slide-up">
+              <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Sparkles className="text-violet-500" />
+                    AI Health Report
+                 </h2>
+                 <button onClick={() => setShowAnalysis(false)} className="p-2 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
+                    <X size={20} />
+                 </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                 {aiLoading ? (
+                    <div className="h-64 flex flex-col items-center justify-center gap-4 text-zinc-500">
+                       <Loader2 className="animate-spin text-violet-500" size={40} />
+                       <p className="animate-pulse">Crunching your data...</p>
+                    </div>
+                 ) : aiError ? (
+                    <div className="text-red-400 bg-red-500/10 p-4 rounded-xl border border-red-500/20 text-center">
+                       {aiError}
+                    </div>
+                 ) : (
+                    <MarkdownText text={analysis} />
+                 )}
+              </div>
+              
+              <div className="p-4 border-t border-zinc-800 bg-zinc-900/50 rounded-b-3xl flex justify-end">
+                 <Button onClick={() => generateAnalysis()} variant="ghost" className="text-zinc-400 hover:text-white mr-2">
+                    Regenerate
+                 </Button>
+                 <Button onClick={() => setShowAnalysis(false)}>
+                    Close
+                 </Button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
