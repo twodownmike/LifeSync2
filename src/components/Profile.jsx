@@ -24,20 +24,38 @@ export default function Profile({
   const [showApiKey, setShowApiKey] = useState(false);
   const unlockedSet = new Set(userSettings.unlockedAchievements || []);
 
-  // Calculate Stats
+  // Calculate Stats & Points
   const stats = useMemo(() => {
     const totalWorkouts = entries.filter(e => e.type === 'workout').length;
     const totalMeals = entries.filter(e => e.type === 'meal').length;
     const currentStreak = calculateStreak(entries);
+    
+    // Points Calculation
+    let totalPoints = 0;
+    ACHIEVEMENTS.forEach(ach => {
+        if (unlockedSet.has(ach.id)) {
+            totalPoints += (ach.points || 0);
+        }
+    });
+
+    // Rank Logic
+    let rank = "Novice";
+    if (totalPoints >= 100) rank = "Seeker";
+    if (totalPoints >= 500) rank = "Adept";
+    if (totalPoints >= 1000) rank = "Elite";
+    if (totalPoints >= 2000) rank = "Master";
+    if (totalPoints >= 5000) rank = "Legend";
+
     // Simple join date estimation (first entry) or just "N/A"
     const firstEntry = entries[entries.length - 1];
     const memberSince = firstEntry ? new Date(firstEntry.timestamp).toLocaleDateString() : 'New User';
     
-    return { totalWorkouts, totalMeals, currentStreak, memberSince };
-  }, [entries]);
+    return { totalWorkouts, totalMeals, currentStreak, memberSince, totalPoints, rank };
+  }, [entries, unlockedSet]);
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'achievements', label: 'Trophies' },
     { id: 'stats', label: 'Stats' },
     { id: 'settings', label: 'Settings' }
   ];
@@ -95,75 +113,98 @@ export default function Profile({
         </div>
       </Card>
 
-      {/* Achievements Preview */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="font-bold text-zinc-400 text-sm uppercase tracking-wider">Recent Achievements</h3>
-          <span className="text-xs text-zinc-500 font-mono">
-             {unlockedSet.size} / {ACHIEVEMENTS.length} Unlocked
-          </span>
-        </div>
-        
-        <div className="grid grid-cols-1 gap-3">
+      {/* Rank Card */}
+      <Card className="relative overflow-hidden group">
+         <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-blue-500/10 opacity-50"></div>
+         <div className="relative z-10 flex items-center justify-between">
+             <div>
+                <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider mb-1">Current Rank</div>
+                <div className="text-2xl font-black text-white italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
+                   {stats.rank}
+                </div>
+                <div className="text-xs text-emerald-400 font-mono mt-1">{stats.totalPoints} XP</div>
+             </div>
+             <Trophy size={48} className="text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]" />
+         </div>
+      </Card>
+    </div>
+  );
+
+  const renderAchievements = () => (
+    <div className="space-y-4 animate-slide-up">
+       <div className="flex items-center justify-between px-1 mb-2">
+           <div>
+               <h3 className="text-lg font-bold text-white">Trophy Case</h3>
+               <p className="text-xs text-zinc-500">Collect trophies to rank up</p>
+           </div>
+           <div className="text-right">
+               <div className="text-2xl font-bold text-white font-mono">{stats.totalPoints}</div>
+               <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">Total Points</div>
+           </div>
+       </div>
+
+       <div className="grid grid-cols-1 gap-3">
           {ACHIEVEMENTS.map(achievement => {
              const isUnlocked = unlockedSet.has(achievement.id);
              
-             const Icon = achievement.icon;
-             let tierColor = 'text-zinc-600';
-             let tierBg = 'bg-zinc-950 border-zinc-900';
-             
-             if (isUnlocked) {
-                if (achievement.tier === 'bronze') {
-                    tierColor = 'text-orange-400';
-                    tierBg = 'bg-orange-950/30 border-orange-500/20';
-                }
-                if (achievement.tier === 'silver') {
-                    tierColor = 'text-zinc-300';
-                    tierBg = 'bg-zinc-800/50 border-zinc-700/50';
-                }
-                if (achievement.tier === 'gold') {
-                    tierColor = 'text-yellow-400';
-                    tierBg = 'bg-yellow-950/30 border-yellow-500/20';
-                }
-                if (achievement.tier === 'platinum') {
-                    tierColor = 'text-cyan-400';
-                    tierBg = 'bg-cyan-950/30 border-cyan-500/20';
-                }
-                if (achievement.tier === 'diamond') {
-                    tierColor = 'text-indigo-400';
-                    tierBg = 'bg-indigo-950/30 border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.2)]';
-                }
+             let tierStyle = {
+                 bg: 'bg-zinc-900',
+                 border: 'border-zinc-800',
+                 text: 'text-zinc-500',
+                 emoji: '🔒'
+             };
+
+             if (achievement.tier === 'bronze') {
+                tierStyle = { bg: 'bg-orange-950/20', border: 'border-orange-500/20', text: 'text-orange-400', emoji: '🥉' };
+             } else if (achievement.tier === 'silver') {
+                tierStyle = { bg: 'bg-zinc-300/10', border: 'border-zinc-400/20', text: 'text-zinc-300', emoji: '🥈' };
+             } else if (achievement.tier === 'gold') {
+                tierStyle = { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', emoji: '🏆' };
+             } else if (achievement.tier === 'platinum') {
+                tierStyle = { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-400', emoji: '💠' };
+             } else if (achievement.tier === 'diamond') {
+                tierStyle = { bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', text: 'text-indigo-400', emoji: '💎' };
+             }
+
+             if (!isUnlocked) {
+                 return (
+                    <div key={achievement.id} className="flex items-center gap-4 p-4 rounded-2xl border border-zinc-900 bg-zinc-950/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all group">
+                        <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-xl shadow-inner border border-zinc-800">
+                           🔒
+                        </div>
+                        <div className="flex-1">
+                           <h4 className="font-bold text-zinc-500 text-sm">{achievement.title}</h4>
+                           <p className="text-xs text-zinc-600">{achievement.desc}</p>
+                        </div>
+                        <div className="text-xs font-mono font-bold text-zinc-700 bg-zinc-900 px-2 py-1 rounded">
+                           +{achievement.points}
+                        </div>
+                    </div>
+                 );
              }
 
              return (
-                <div 
-                  key={achievement.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all
-                    ${isUnlocked 
-                       ? 'bg-zinc-900 border-zinc-800' 
-                       : 'bg-zinc-950/30 border-zinc-900/50 opacity-60 grayscale'}`}
-                >
-                   <div className={`p-2 rounded-full border ${tierBg} ${tierColor}`}>
-                      {isUnlocked ? <Icon size={16} /> : <Lock size={16} />}
+                <div key={achievement.id} className={`flex items-center gap-4 p-4 rounded-2xl border ${tierStyle.bg} ${tierStyle.border} relative overflow-hidden group transition-all hover:scale-[1.02]`}>
+                   <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                   
+                   <div className="w-12 h-12 rounded-full bg-zinc-950/50 flex items-center justify-center text-2xl shadow-xl border border-white/10 relative z-10">
+                      {tierStyle.emoji}
                    </div>
-                   <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center mb-0.5">
-                          <h4 className={`text-sm font-bold truncate ${isUnlocked ? 'text-zinc-200' : 'text-zinc-600'}`}>
-                             {achievement.title}
-                          </h4>
-                          {isUnlocked && (
-                              <span className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${tierBg} ${tierColor}`}>
-                                  {achievement.tier}
-                              </span>
-                          )}
+                   
+                   <div className="flex-1 relative z-10">
+                      <div className="flex items-center gap-2">
+                        <h4 className={`font-bold text-sm ${tierStyle.text} tracking-wide`}>{achievement.title}</h4>
                       </div>
-                      <p className="text-xs text-zinc-500 truncate">{achievement.desc}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5">{achievement.desc}</p>
+                   </div>
+                   
+                   <div className={`text-sm font-mono font-bold ${tierStyle.text} bg-zinc-950/50 px-3 py-1.5 rounded-lg border border-white/5`}>
+                      +{achievement.points}
                    </div>
                 </div>
-             )
+             );
           })}
-        </div>
-      </div>
+       </div>
     </div>
   );
 
@@ -429,6 +470,7 @@ export default function Profile({
       {/* Content */}
       <div className="flex-1 overflow-y-auto pr-1 -mr-1 scrollbar-hide">
         {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'achievements' && renderAchievements()}
         {activeTab === 'stats' && renderStats()}
         {activeTab === 'settings' && renderSettings()}
       </div>

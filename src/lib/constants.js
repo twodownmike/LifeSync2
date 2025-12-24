@@ -44,6 +44,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log your first entry of any kind.',
     icon: Star,
     tier: 'bronze',
+    points: 10,
     check: (entries) => entries.length > 0
   },
   {
@@ -52,6 +53,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log a workout before 8 AM.',
     icon: Sunrise,
     tier: 'bronze',
+    points: 10,
     check: (entries) => entries.some(e => e.type === 'workout' && new Date(e.timestamp).getHours() < 8 && new Date(e.timestamp).getHours() > 3)
   },
   {
@@ -60,6 +62,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete your first Breathwork session.',
     icon: Wind,
     tier: 'bronze',
+    points: 10,
     check: (entries) => entries.some(e => e.type === 'breathwork')
   },
   {
@@ -68,6 +71,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete your first Focus Session.',
     icon: Brain,
     tier: 'bronze',
+    points: 10,
     check: (entries) => entries.some(e => e.type === 'work_session')
   },
   {
@@ -76,6 +80,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log 3 journal entries.',
     icon: Book,
     tier: 'bronze',
+    points: 10,
     check: (entries) => entries.filter(e => e.type === 'journal').length >= 3
   },
 
@@ -86,6 +91,7 @@ export const ACHIEVEMENTS = [
     desc: 'Reach a 16-hour fast.',
     icon: Clock,
     tier: 'silver',
+    points: 25,
     check: (entries, fastHrs) => fastHrs >= 16
   },
   {
@@ -94,6 +100,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log entries 3 days in a row.',
     icon: Flame,
     tier: 'silver',
+    points: 25,
     check: (entries) => calculateStreak(entries) >= 3
   },
   {
@@ -102,6 +109,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log 10 total workouts.',
     icon: Dumbbell,
     tier: 'silver',
+    points: 25,
     check: (entries) => entries.filter(e => e.type === 'workout').length >= 10
   },
   {
@@ -110,6 +118,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete 5 Breathwork sessions.',
     icon: Wind,
     tier: 'silver',
+    points: 25,
     check: (entries) => entries.filter(e => e.type === 'breathwork').length >= 5
   },
   {
@@ -118,6 +127,7 @@ export const ACHIEVEMENTS = [
     desc: 'Accumulate 5 hours of Focus time.',
     icon: Brain,
     tier: 'silver',
+    points: 25,
     check: (entries) => entries.reduce((acc, e) => e.type === 'work_session' ? acc + (parseInt(e.duration)||0) : acc, 0) >= 300
   },
   {
@@ -126,6 +136,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log workouts on Saturday and Sunday of the same weekend.',
     icon: Calendar,
     tier: 'silver',
+    points: 25,
     check: (entries) => {
        const workouts = entries.filter(e => e.type === 'workout');
        const saturdays = workouts.filter(e => new Date(e.timestamp).getDay() === 6);
@@ -145,6 +156,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete a 23-hour fast.',
     icon: Crown,
     tier: 'gold',
+    points: 50,
     check: (entries, fastHrs) => fastHrs >= 23
   },
   {
@@ -153,6 +165,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log entries 7 days in a row.',
     icon: Zap,
     tier: 'gold',
+    points: 50,
     check: (entries) => calculateStreak(entries) >= 7
   },
   {
@@ -161,6 +174,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log 25 total workouts.',
     icon: Dumbbell,
     tier: 'gold',
+    points: 50,
     check: (entries) => entries.filter(e => e.type === 'workout').length >= 25
   },
   {
@@ -169,6 +183,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete 20 Breathwork sessions.',
     icon: Wind,
     tier: 'gold',
+    points: 50,
     check: (entries) => entries.filter(e => e.type === 'breathwork').length >= 20
   },
   {
@@ -177,6 +192,7 @@ export const ACHIEVEMENTS = [
     desc: 'Accumulate 20 hours of Focus time.',
     icon: Target,
     tier: 'gold',
+    points: 50,
     check: (entries) => entries.reduce((acc, e) => e.type === 'work_session' ? acc + (parseInt(e.duration)||0) : acc, 0) >= 1200
   },
   {
@@ -185,6 +201,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log entries 14 days in a row.',
     icon: Calendar,
     tier: 'gold',
+    points: 50,
     check: (entries) => calculateStreak(entries) >= 14
   },
 
@@ -195,6 +212,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log entries 30 days in a row.',
     icon: Medal,
     tier: 'platinum',
+    points: 100,
     check: (entries) => calculateStreak(entries) >= 30
   },
   {
@@ -203,6 +221,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete a 36-hour fast.',
     icon: Shield,
     tier: 'platinum',
+    points: 100,
     check: (entries, fastHrs) => fastHrs >= 36
   },
   {
@@ -211,6 +230,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log 50 total workouts.',
     icon: Sword,
     tier: 'platinum',
+    points: 100,
     check: (entries) => entries.filter(e => e.type === 'workout').length >= 50
   },
   {
@@ -219,6 +239,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete 50 Breathwork sessions.',
     icon: Wind,
     tier: 'platinum',
+    points: 100,
     check: (entries) => entries.filter(e => e.type === 'breathwork').length >= 50
   },
   {
@@ -227,6 +248,7 @@ export const ACHIEVEMENTS = [
     desc: 'Accumulate 50 hours of Focus time.',
     icon: Brain,
     tier: 'platinum',
+    points: 100,
     check: (entries) => entries.reduce((acc, e) => e.type === 'work_session' ? acc + (parseInt(e.duration)||0) : acc, 0) >= 3000
   },
   {
@@ -235,6 +257,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log 100 total entries of any kind.',
     icon: Trophy,
     tier: 'platinum',
+    points: 100,
     check: (entries) => entries.length >= 100
   },
 
@@ -245,6 +268,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log entries 100 days in a row.',
     icon: Mountain,
     tier: 'diamond',
+    points: 250,
     check: (entries) => calculateStreak(entries) >= 100
   },
   {
@@ -253,6 +277,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete a 72-hour fast.',
     icon: Crown,
     tier: 'diamond',
+    points: 250,
     check: (entries, fastHrs) => fastHrs >= 72
   },
   {
@@ -261,6 +286,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log 100 total workouts.',
     icon: Medal,
     tier: 'diamond',
+    points: 250,
     check: (entries) => entries.filter(e => e.type === 'workout').length >= 100
   },
   {
@@ -269,6 +295,7 @@ export const ACHIEVEMENTS = [
     desc: 'Complete 100 Breathwork sessions.',
     icon: Activity,
     tier: 'diamond',
+    points: 250,
     check: (entries) => entries.filter(e => e.type === 'breathwork').length >= 100
   },
   {
@@ -277,6 +304,7 @@ export const ACHIEVEMENTS = [
     desc: 'Accumulate 100 hours of Focus time.',
     icon: Clock,
     tier: 'diamond',
+    points: 250,
     check: (entries) => entries.reduce((acc, e) => e.type === 'work_session' ? acc + (parseInt(e.duration)||0) : acc, 0) >= 6000
   },
   {
@@ -285,6 +313,7 @@ export const ACHIEVEMENTS = [
     desc: 'Log 500 total entries.',
     icon: Star,
     tier: 'diamond',
+    points: 250,
     check: (entries) => entries.length >= 500
   }
 ];
