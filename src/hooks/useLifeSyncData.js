@@ -12,7 +12,6 @@ import { db, appId } from '../lib/firebase';
 
 export function useLifeSyncData(user) {
   const [entries, setEntries] = useState([]);
-  const [routines, setRoutines] = useState([]);
   const [userSettings, setUserSettings] = useState({ 
     displayName: 'Guest', 
     fastingGoal: 16,
@@ -59,20 +58,6 @@ export function useLifeSyncData(user) {
     return () => unsubscribe();
   }, [user]);
 
-  // Fetch Routines
-  useEffect(() => {
-    if (!user) return;
-    const q = collection(db, 'artifacts', appId, 'users', user.uid, 'routines');
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedRoutines = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setRoutines(fetchedRoutines);
-    });
-    return () => unsubscribe();
-  }, [user]);
-
   // Actions
   const addEntry = async (entryData) => {
     if (!user) return;
@@ -112,81 +97,13 @@ export function useLifeSyncData(user) {
     }
   };
 
-  const createRoutine = async (routineData) => {
-    if (!user) return;
-    setIsSaving(true);
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'routines'), {
-        ...routineData,
-        completedDates: []
-      });
-    } catch (err) {
-      console.error("Error creating routine:", err);
-      throw err;
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const toggleRoutine = async (routineId, isCompleted) => {
-    if (!user) return;
-    const today = new Date().toISOString().split('T')[0];
-    
-    const routine = routines.find(r => r.id === routineId);
-    if (!routine) return;
-    
-    let newDates = routine.completedDates || [];
-    if (isCompleted) {
-      newDates = newDates.filter(d => d !== today);
-    } else {
-      newDates.push(today);
-    }
-
-    try {
-      await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'routines', routineId), {
-        completedDates: newDates
-      });
-    } catch(err) {
-      console.error("Error updating routine:", err);
-      throw err;
-    }
-  };
-
-  const updateRoutine = async (id, updates) => {
-    if (!user) return;
-    setIsSaving(true);
-    try {
-      await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'routines', id), updates);
-    } catch (err) {
-      console.error("Error updating routine:", err);
-      throw err;
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const deleteRoutine = async (id) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'routines', id));
-    } catch (err) { 
-        console.error(err); 
-        throw err;
-    }
-  };
-
   return {
     entries,
-    routines,
     userSettings,
     isSaving,
     addEntry,
     deleteEntry,
     updateSettings,
-    createRoutine,
-    toggleRoutine,
-    updateRoutine,
-    deleteRoutine,
-    setUserSettings // Exporting setter for local form state updates if needed, though updateSettings handles sync
+    setUserSettings 
   };
 }

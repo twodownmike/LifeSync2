@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db, appId } from '../lib/firebase';
 
-export function useCoach(user, apiKey, entries, routines, userSettings, fastingData, bioPhase) {
+export function useCoach(user, apiKey, entries, userSettings, fastingData, bioPhase) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
@@ -88,13 +88,9 @@ export function useCoach(user, apiKey, entries, routines, userSettings, fastingD
             .map(e => `- ${new Date(e.timestamp).toLocaleDateString()}: [${e.type.toUpperCase()}] ${e.title} ${formatMood(e)} - ${e.note || ''}`)
             .join('\n');
 
-        // 2. Routines
-        const todayIndex = new Date().getDay();
-        const routineContext = routines.map(r => {
-            const isToday = r.days.includes(todayIndex);
-            const isDone = (r.completedDates || []).includes(new Date().toISOString().split('T')[0]);
-            return `- ${r.title} (${r.type}): ${isToday ? (isDone ? "DONE" : "PENDING") : "Not scheduled today"}`;
-        }).join('\n');
+        // 2. Routines (Removed)
+        // const todayIndex = new Date().getDay();
+        // const routineContext = routines.map(r => { ... }).join('\n');
         
         // 3. Physiology
         const totalFastHours = fastingData.hours + (fastingData.minutes/60);
@@ -119,9 +115,6 @@ export function useCoach(user, apiKey, entries, routines, userSettings, fastingD
           - **State:** ${physioState}
           - **Goal:** ${userSettings.fastingGoal}h
 
-          ### ROUTINE STATUS (Today)
-          ${routineContext || "No active routines."}
-          
           ### RECENT LOGS (Last 10 Entries)
           **Meals:**
           ${allMeals || "No recent meals."}
@@ -136,7 +129,7 @@ export function useCoach(user, apiKey, entries, routines, userSettings, fastingD
           1. **Be Concise & Punchy:** Avoid long paragraphs. Use bullet points and short sentences.
           2. **Data-Driven:** Reference specific logs, mood ratings, or metrics (e.g., "I see your energy was low after that meal...").
           3. **Bio-Rhythm Aware:** If it's late (Phase: Recover), suggest winding down. If early (Phase: Prime), suggest action.
-          4. **Hard Truths:** If the user is missing routines or breaking fasts early, call them out gently but firmly.
+          4. **Hard Truths:** If the user is breaking fasts early, call them out gently but firmly.
           5. **Formatting:**
              - Use '###' for small section headers.
              - Use '> ' for a "Key Takeaway" or "Quote of the Moment" at the end.

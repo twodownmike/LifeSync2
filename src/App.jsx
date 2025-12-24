@@ -21,8 +21,8 @@ import { useFastingNotifications } from './hooks/useFastingNotifications';
 export default function LifeSync() {
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
   const { 
-    entries, routines, userSettings, isSaving, 
-    addEntry, deleteEntry, updateSettings, createRoutine, toggleRoutine, updateRoutine, deleteRoutine, setUserSettings 
+    entries, userSettings, isSaving, 
+    addEntry, deleteEntry, updateSettings, setUserSettings 
   } = useLifeSyncData(user);
   
   const { fastingData, bioPhase, lastMeal } = useFasting(entries, userSettings);
@@ -42,7 +42,6 @@ export default function LifeSync() {
   const [isTypeSelectorOpen, setIsTypeSelectorOpen] = useState(false); 
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false); 
-  const [isRoutineModalOpen, setIsRoutineModalOpen] = useState(false);
   const [isBreathworkOpen, setIsBreathworkOpen] = useState(false);
   
   const [modalType, setModalType] = useState(null); 
@@ -59,12 +58,6 @@ export default function LifeSync() {
   const [exName, setExName] = useState('');
   const [exWeight, setExWeight] = useState('');
   const [exReps, setExReps] = useState('');
-
-  // Routine Builder
-  const [routineTitle, setRoutineTitle] = useState('');
-  const [routineType, setRoutineType] = useState('mindset');
-  const [routineDays, setRoutineDays] = useState([]);
-  const [editingRoutineId, setEditingRoutineId] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('lifesync_openai_key', apiKey);
@@ -125,42 +118,6 @@ export default function LifeSync() {
 
     await addEntry(entryData);
     closeModal();
-  };
-
-  const handleSaveRoutine = async () => {
-    const routineData = {
-        title: routineTitle,
-        type: routineType,
-        days: routineDays.length > 0 ? routineDays : [0,1,2,3,4,5,6]
-    };
-
-    if (editingRoutineId) {
-        await updateRoutine(editingRoutineId, routineData);
-    } else {
-        await createRoutine(routineData);
-    }
-
-    setIsRoutineModalOpen(false);
-    setRoutineTitle('');
-    setRoutineDays([]);
-    setRoutineType('mindset');
-    setEditingRoutineId(null);
-  };
-
-  const handleEditRoutine = (routine) => {
-    setEditingRoutineId(routine.id);
-    setRoutineTitle(routine.title);
-    setRoutineType(routine.type);
-    setRoutineDays(routine.days || []);
-    setIsRoutineModalOpen(true);
-  };
-
-  const toggleDay = (dayIdx) => {
-    if (routineDays.includes(dayIdx)) {
-       setRoutineDays(routineDays.filter(d => d !== dayIdx));
-    } else {
-       setRoutineDays([...routineDays, dayIdx].sort());
-    }
   };
 
   const addExerciseToSession = () => {
@@ -238,13 +195,8 @@ export default function LifeSync() {
                 userSettings={userSettings}
                 fastingData={fastingData}
                 entries={entries}
-                routines={routines}
                 bioPhase={bioPhase}
                 onDeleteEntry={deleteEntry}
-                onToggleRoutine={toggleRoutine}
-                onDeleteRoutine={deleteRoutine}
-                onEditRoutine={handleEditRoutine}
-                onOpenRoutineModal={() => setIsRoutineModalOpen(true)}
                 onOpenGoalModal={() => { setTempGoal(userSettings.fastingGoal); setIsGoalModalOpen(true); }}
                 onOpenInfoModal={() => setIsInfoModalOpen(true)}
                 onOpenBreathwork={() => setIsBreathworkOpen(true)}
@@ -273,7 +225,6 @@ export default function LifeSync() {
                user={user} 
                apiKey={apiKey} 
                entries={entries} 
-               routines={routines}
                userSettings={userSettings} 
                fastingData={fastingData} 
                bioPhase={bioPhase}
@@ -581,79 +532,6 @@ export default function LifeSync() {
               </div>
               <Button onClick={() => setIsInfoModalOpen(false)} className="w-full mt-8">Got it</Button>
             </div>
-          </div>
-        )}
-
-        {/* Routine Modal */}
-        {isRoutineModalOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-             <div className="bg-zinc-900 w-full max-w-sm rounded-3xl border border-zinc-800 p-6 animate-slide-up shadow-2xl">
-                <h3 className="text-lg font-bold text-white mb-6">{editingRoutineId ? 'Edit Routine' : 'Create Routine'}</h3>
-                <div className="space-y-4">
-                   <div>
-                      <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Title</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Morning Meditation"
-                        value={routineTitle}
-                        onChange={(e) => setRoutineTitle(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
-                      />
-                   </div>
-                   
-                   <div>
-                      <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Type</label>
-                      <div className="flex gap-2">
-                         {['mindset', 'exercise', 'diet'].map(t => (
-                            <button 
-                               key={t}
-                               onClick={() => setRoutineType(t)}
-                               className={`flex-1 py-2 rounded-xl text-xs font-bold border capitalize transition-all
-                                  ${routineType === t 
-                                    ? 'bg-emerald-500 text-black border-emerald-500' 
-                                    : 'bg-zinc-950 text-zinc-500 border-zinc-800'}`}
-                            >
-                               {t}
-                            </button>
-                         ))}
-                      </div>
-                   </div>
-
-                   <div>
-                      <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Frequency</label>
-                      <div className="flex justify-between gap-1">
-                         {['S','M','T','W','T','F','S'].map((d, i) => (
-                            <button
-                               key={i}
-                               onClick={() => toggleDay(i)}
-                               className={`w-8 h-8 rounded-lg text-xs font-bold border transition-all
-                                  ${routineDays.includes(i) || routineDays.length === 0
-                                    ? 'bg-zinc-800 text-white border-zinc-700'
-                                    : 'bg-zinc-950 text-zinc-600 border-zinc-900'}`}
-                            >
-                               {d}
-                            </button>
-                         ))}
-                      </div>
-                      <p className="text-[10px] text-zinc-500 mt-2 text-center">
-                         {routineDays.length === 0 ? "Every Day" : "Selected Days Only"}
-                      </p>
-                   </div>
-
-                   <Button onClick={handleSaveRoutine} disabled={isSaving} className="w-full mt-2">
-                     {isSaving ? 'Saving...' : (editingRoutineId ? 'Update Routine' : 'Create Routine')}
-                   </Button>
-                   <Button variant="ghost" onClick={() => {
-                     setIsRoutineModalOpen(false);
-                     setEditingRoutineId(null);
-                     setRoutineTitle('');
-                     setRoutineDays([]);
-                     setRoutineType('mindset');
-                   }} className="w-full">
-                     Cancel
-                   </Button>
-                </div>
-             </div>
           </div>
         )}
 

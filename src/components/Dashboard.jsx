@@ -7,13 +7,8 @@ export default function Dashboard({
   userSettings, 
   fastingData, 
   entries, 
-  routines, 
   bioPhase, 
   onDeleteEntry, 
-  onToggleRoutine, 
-  onDeleteRoutine, 
-  onEditRoutine,
-  onOpenRoutineModal,
   onOpenGoalModal,
   onOpenInfoModal,
   onOpenBreathwork
@@ -44,14 +39,6 @@ export default function Dashboard({
         workouts: todayEntries.filter(e => e.type === 'workout').length
     };
   }, [entries, todayStr]);
-
-  const todaysRoutines = routines.filter(r => r.days.includes(todayIndex));
-  todaysRoutines.sort((a, b) => {
-     const aDone = (a.completedDates || []).includes(todayStr);
-     const bDone = (b.completedDates || []).includes(todayStr);
-     if (aDone === bDone) return 0;
-     return aDone ? 1 : -1;
-  });
 
   const filteredEntries = entries.filter(entry => {
     if (filter === 'all') return true;
@@ -161,82 +148,6 @@ export default function Dashboard({
                    <ChevronRight size={20} className="text-zinc-600 group-hover:text-white transition-colors" />
                 </div>
              </div>
-          </div>
-
-          {/* Routine / Daily Checklist Section */}
-          <div>
-             <div className="flex justify-between items-center mb-4 px-1">
-                 <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-                    <ListChecks size={16} />
-                    Daily Protocol
-                 </h3>
-                 <button onClick={onOpenRoutineModal} className="p-2 hover:bg-zinc-800 rounded-full text-zinc-500 hover:text-white transition-colors">
-                   <Plus size={18} />
-                 </button>
-             </div>
-
-             {todaysRoutines.length === 0 ? (
-                 <div className="text-center py-6 border border-dashed border-zinc-900 rounded-2xl bg-zinc-900/30">
-                    <p className="text-zinc-600 text-sm">No protocols set for today.</p>
-                    <button onClick={onOpenRoutineModal} className="mt-2 text-xs text-emerald-500 font-bold hover:text-emerald-400">
-                       + Add Routine
-                    </button>
-                 </div>
-             ) : (
-                 <div className="flex overflow-x-auto gap-3 pb-4 scrollbar-hide -mx-6 px-6 snap-x snap-mandatory lg:mx-0 lg:px-0 lg:flex-wrap lg:overflow-visible">
-                    {todaysRoutines.map(routine => {
-                       const isCompleted = (routine.completedDates || []).includes(todayStr);
-                       const colors = {
-                          diet: 'text-orange-400 border-orange-500/20 bg-orange-500/5',
-                          exercise: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5',
-                          mindset: 'text-cyan-400 border-cyan-500/20 bg-cyan-500/5'
-                       };
-                       
-                       return (
-                          <div 
-                            key={routine.id}
-                            onClick={() => onToggleRoutine(routine.id, isCompleted)}
-                            className={`
-                               flex-none w-40 lg:w-48 p-4 rounded-2xl border transition-all cursor-pointer group flex flex-col justify-between min-h-[110px] snap-start relative overflow-hidden
-                               ${isCompleted ? 'bg-zinc-900/30 border-zinc-800/50 opacity-60' : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/80'}
-                            `}
-                          >
-                              {isCompleted && <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none"></div>}
-                              
-                              <div className="flex justify-between items-start relative z-10">
-                                  <div className={`transition-transform duration-300 ${isCompleted ? 'scale-110 text-emerald-500' : colors[routine.type].split(' ')[0]}`}>
-                                    {isCompleted ? <CheckCircle size={20} className="fill-emerald-500/20" /> : <Circle size={20} />}
-                                  </div>
-                                  
-                                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button 
-                                       onClick={(e) => { e.stopPropagation(); onEditRoutine(routine); }}
-                                       className="text-zinc-600 hover:text-white transition-colors"
-                                    >
-                                       <Pencil size={14} />
-                                    </button>
-                                    <button 
-                                       onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }}
-                                       className="text-zinc-600 hover:text-red-400 transition-colors"
-                                    >
-                                       <Trash2 size={14} />
-                                    </button>
-                                  </div>
-                              </div>
-                              
-                              <div className="relative z-10">
-                                 <div className={`font-bold leading-tight mb-2 ${isCompleted ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>
-                                   {routine.title}
-                                 </div>
-                                 <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded border ${colors[routine.type]}`}>
-                                    {routine.type}
-                                 </span>
-                              </div>
-                          </div>
-                       )
-                    })}
-                 </div>
-             )}
           </div>
         </div>
 
