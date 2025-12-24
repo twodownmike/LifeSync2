@@ -28,7 +28,7 @@ export const FastingTrendChart = ({ data, goal }) => {
   const goalY = getY(goal);
 
   return (
-    <div className="w-full h-48 select-none">
+    <div className="w-full h-48 lg:h-64 select-none">
        <div className="relative w-full h-full pb-6 pl-8 pr-4">
           {/* Y-Axis Labels */}
           <div className="absolute left-0 top-0 h-full pb-6 flex flex-col justify-between text-[10px] text-zinc-600 font-mono">
@@ -108,7 +108,7 @@ export const ActivityBarChart = ({ data }) => {
    const maxValue = Math.max(...data.map(d => d.meals + d.workouts + d.focus), 5);
 
    return (
-      <div className="w-full h-48 select-none">
+      <div className="w-full h-48 lg:h-64 select-none">
          <div className="w-full h-full flex flex-col justify-end gap-2 pb-6">
             <div className="flex-1 flex items-end justify-between gap-2 px-2">
                {data.map((d, i) => {
@@ -222,7 +222,7 @@ export const MoodTrendChart = ({ data }) => {
   }).join(' ');
 
   return (
-    <div className="w-full h-48 select-none relative">
+    <div className="w-full h-48 lg:h-64 select-none relative">
        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-zinc-600 font-mono pb-6 pl-1">
           <span>10</span>
           <span>5</span>
@@ -321,7 +321,7 @@ export const WeightChart = ({ data }) => {
   }).join(' ');
 
   return (
-    <div className="w-full h-48 select-none relative">
+    <div className="w-full h-48 lg:h-64 select-none relative">
        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-zinc-600 font-mono pb-6 pl-1">
           <span>{maxW.toFixed(0)}</span>
           <span>{minW.toFixed(0)}</span>

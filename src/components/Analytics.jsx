@@ -170,46 +170,49 @@ export default function Analytics({ entries }) {
 
       {/* Charts Section */}
 
-      {/* Weight Trends */}
-      {weightTrends.length > 0 && (
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Weight Trends */}
+          {weightTrends.length > 0 && (
+              <Card>
+                 <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                    <Scale size={18} className="text-zinc-400" />
+                    Weight Trends
+                 </h3>
+                 <WeightChart data={weightTrends} />
+              </Card>
+          )}
+          
+          {/* Fasting Trends */}
+          <Card>
+             <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                   <Activity size={18} className="text-zinc-400" />
+                   Fasting Trends
+                </h3>
+                <span className="text-xs text-zinc-500 font-mono">Personal Best: {fastingAnalysis.longest.toFixed(1)}h</span>
+             </div>
+             <FastingTrendChart data={fastingAnalysis.trends} goal={16} />
+          </Card>
+
+          {/* Mood & Energy Trends */}
           <Card>
              <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                <Scale size={18} className="text-zinc-400" />
-                Weight Trends
+                <Smile size={18} className="text-zinc-400" />
+                Mood & Energy
              </h3>
-             <WeightChart data={weightTrends} />
+             <MoodTrendChart data={moodTrends} />
           </Card>
-      )}
-      
-      {/* Fasting Trends */}
-      <Card>
-         <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-white flex items-center gap-2">
-               <Activity size={18} className="text-zinc-400" />
-               Fasting Trends
-            </h3>
-            <span className="text-xs text-zinc-500 font-mono">Personal Best: {fastingAnalysis.longest.toFixed(1)}h</span>
-         </div>
-         <FastingTrendChart data={fastingAnalysis.trends} goal={16} />
-      </Card>
 
-      {/* Mood & Energy Trends */}
-      <Card>
-         <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-            <Smile size={18} className="text-zinc-400" />
-            Mood & Energy
-         </h3>
-         <MoodTrendChart data={moodTrends} />
-      </Card>
-
-      {/* Weekly Activity */}
-      <Card>
-         <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-            <Activity size={18} className="text-zinc-400" />
-            Weekly Activity
-         </h3>
-         <ActivityBarChart data={weeklyActivity} />
-      </Card>
+          {/* Weekly Activity */}
+          <Card>
+             <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                <Activity size={18} className="text-zinc-400" />
+                Weekly Activity
+             </h3>
+             <ActivityBarChart data={weeklyActivity} />
+          </Card>
+      </div>
 
       {/* Tag Distribution */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
