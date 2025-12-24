@@ -10,6 +10,7 @@ import Coach from './components/Coach';
 import FastingTimer from './components/FastingTimer';
 import Dashboard from './components/Dashboard';
 import Breathwork from './components/Breathwork';
+import TrophyRoom from './components/TrophyRoom';
 import Sidebar from './components/Sidebar';
 import { Button } from './components/UI';
 import { useAuth } from './hooks/useAuth';
@@ -22,7 +23,7 @@ export default function LifeSync() {
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
   const { 
     entries, userSettings, isSaving, 
-    addEntry, deleteEntry, updateSettings, setUserSettings 
+    addEntry, deleteEntry, updateSettings, setUserSettings, awardXP 
   } = useLifeSyncData(user);
   
   const { fastingData, bioPhase, lastMeal } = useFasting(entries, userSettings);
@@ -43,6 +44,7 @@ export default function LifeSync() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false); 
   const [isBreathworkOpen, setIsBreathworkOpen] = useState(false);
+  const [isTrophyModalOpen, setIsTrophyModalOpen] = useState(false);
   
   const [modalType, setModalType] = useState(null); 
   const [note, setNote] = useState('');
@@ -117,6 +119,16 @@ export default function LifeSync() {
     }
 
     await addEntry(entryData);
+    
+    // XP Rewards
+    let xpEarned = 10; // Base for logging
+    if (modalType === 'meal' && lastMeal) {
+        const diffMs = new Date(entryData.timestamp) - new Date(lastMeal.timestamp);
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        if (hours > 0) xpEarned += (hours * 5); // 5 XP per hour of fasting
+    }
+    await awardXP(xpEarned);
+
     closeModal();
   };
 
@@ -138,6 +150,9 @@ export default function LifeSync() {
         duration: minutes,
         timestamp: new Date().toISOString()
     });
+    
+    // XP: 10 base + 1 per minute
+    await awardXP(10 + minutes);
   };
 
   const handleFocusSessionComplete = async (durationMinutes, taskLabel, tag) => {
@@ -152,6 +167,9 @@ export default function LifeSync() {
         duration: durationMinutes,
         timestamp: new Date().toISOString()
     });
+    
+    // XP: 10 base + 1 per minute
+    await awardXP(10 + durationMinutes);
   };
 
   const handleUpdateGoal = async () => {
@@ -200,6 +218,7 @@ export default function LifeSync() {
                 onOpenGoalModal={() => { setTempGoal(userSettings.fastingGoal); setIsGoalModalOpen(true); }}
                 onOpenInfoModal={() => setIsInfoModalOpen(true)}
                 onOpenBreathwork={() => setIsBreathworkOpen(true)}
+                onOpenTrophyRoom={() => setIsTrophyModalOpen(true)}
              />
            )}
            {activeTab === 'fasting' && (
@@ -537,6 +556,14 @@ export default function LifeSync() {
 
         {/* Breathwork Overlay */}
         {isBreathworkOpen && <Breathwork onClose={() => setIsBreathworkOpen(false)} onSessionComplete={handleBreathworkComplete} />}
+
+        {/* Trophy Room Overlay */}
+        {isTrophyModalOpen && (
+          <TrophyRoom 
+            unlockedIds={userSettings.unlockedAchievements} 
+            onClose={() => setIsTrophyModalOpen(false)} 
+          />
+        )}
 
       </div>
     </div>

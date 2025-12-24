@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Activity, Clock, Wind, Flame, Brain, ChevronRight, Zap, Dumbbell } from 'lucide-react';
+import { Activity, Clock, Wind, Flame, Brain, ChevronRight, Zap, Dumbbell, Trophy, Star } from 'lucide-react';
 import { TimelineEntry } from './TimelineEntry';
 import { calculateStreak } from '../lib/constants';
 
@@ -11,7 +11,8 @@ export default function Dashboard({
   onDeleteEntry, 
   onOpenGoalModal,
   onOpenInfoModal,
-  onOpenBreathwork
+  onOpenBreathwork,
+  onOpenTrophyRoom
 }) {
   const [filter, setFilter] = useState('all');
 
@@ -25,6 +26,28 @@ export default function Dashboard({
     if (hour < 18) return "Good Afternoon";
     return "Good Evening";
   }, []);
+
+  // Level & XP Calculation
+  const levelStats = useMemo(() => {
+      const xp = userSettings.xp || 0;
+      let level = 1;
+      let xpCounter = 0;
+      
+      // Re-run the loop to find current level bounds
+      while (true) {
+          const xpNeeded = level * 100;
+          if (xp >= xpCounter + xpNeeded) {
+              xpCounter += xpNeeded;
+              level++;
+          } else {
+              // Current Level Found
+              const currentLevelXP = xp - xpCounter;
+              const nextLevelXP = xpNeeded;
+              const progress = (currentLevelXP / nextLevelXP) * 100;
+              return { level, currentLevelXP, nextLevelXP, progress };
+          }
+      }
+  }, [userSettings.xp]);
 
   // Vitals Calculation
   const vitals = useMemo(() => {
@@ -80,23 +103,58 @@ export default function Dashboard({
                <p className="text-zinc-400 mt-2 max-w-md text-sm md:text-base leading-relaxed opacity-90">
                  {bioPhase.desc}
                </p>
+               
+               {/* XP & Level Progress */}
+               <div className="mt-4 flex items-center gap-3">
+                  <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-3 py-1 flex items-center gap-2">
+                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                        <Star size={10} className="text-black fill-current" />
+                     </div>
+                     <span className="text-xs font-bold text-white tracking-wide">Lvl {levelStats.level}</span>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="h-2 w-32 bg-zinc-800/50 rounded-full overflow-hidden border border-white/5">
+                     <div 
+                        className="h-full bg-gradient-to-r from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]" 
+                        style={{ width: `${levelStats.progress}%` }}
+                     ></div>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500 font-medium">
+                     {Math.floor(levelStats.currentLevelXP)} / {levelStats.nextLevelXP} XP
+                  </span>
+               </div>
             </div>
 
-            <button 
-              onClick={onOpenBreathwork}
-              className="group relative px-5 py-3 rounded-2xl bg-zinc-950/50 border border-zinc-800 hover:border-cyan-500/50 transition-all hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] overflow-hidden"
-            >
-               <div className="absolute inset-0 bg-cyan-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-               <div className="relative flex items-center gap-3">
-                  <div className="p-1.5 bg-cyan-500/20 rounded-lg text-cyan-400 group-hover:scale-110 transition-transform duration-300">
-                    <Wind size={20} />
-                  </div>
-                  <div className="text-left">
-                     <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider group-hover:text-cyan-200 transition-colors">Shift State</div>
-                     <div className="text-sm font-bold text-white">Breathwork</div>
-                  </div>
-               </div>
-            </button>
+            <div className="flex gap-3">
+                <button 
+                  onClick={onOpenTrophyRoom}
+                  className="group relative px-4 py-3 rounded-2xl bg-zinc-950/50 border border-zinc-800 hover:border-yellow-500/50 transition-all hover:shadow-[0_0_20px_rgba(234,179,8,0.15)] overflow-hidden"
+                >
+                   <div className="absolute inset-0 bg-yellow-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                   <div className="relative flex items-center justify-center">
+                      <div className="text-yellow-500 group-hover:scale-110 transition-transform duration-300">
+                        <Trophy size={20} />
+                      </div>
+                   </div>
+                </button>
+
+                <button 
+                  onClick={onOpenBreathwork}
+                  className="group relative px-5 py-3 rounded-2xl bg-zinc-950/50 border border-zinc-800 hover:border-cyan-500/50 transition-all hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] overflow-hidden"
+                >
+                   <div className="absolute inset-0 bg-cyan-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                   <div className="relative flex items-center gap-3">
+                      <div className="p-1.5 bg-cyan-500/20 rounded-lg text-cyan-400 group-hover:scale-110 transition-transform duration-300">
+                        <Wind size={20} />
+                      </div>
+                      <div className="text-left">
+                         <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider group-hover:text-cyan-200 transition-colors">Shift State</div>
+                         <div className="text-sm font-bold text-white">Breathwork</div>
+                      </div>
+                   </div>
+                </button>
+            </div>
          </div>
       </div>
 

@@ -24,7 +24,9 @@ export function useLifeSyncData(user) {
     gender: '',
     activityLevel: 'moderate',
     unlockedAchievements: [],
-    activeDetox: null 
+    activeDetox: null,
+    xp: 0,
+    level: 1
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -59,6 +61,53 @@ export function useLifeSyncData(user) {
   }, [user]);
 
   // Actions
+  const updateSettings = async (newSettings) => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      // Optimistic update
+      setUserSettings(newSettings);
+      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'profile'), newSettings);
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      throw err;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const awardXP = async (amount) => {
+    if (!user) return;
+    
+    const currentXP = userSettings.xp || 0;
+    const currentLevel = userSettings.level || 1;
+    const newXP = currentXP + amount;
+    
+    // Level Curve: Threshold for next level = currentLevel * 100.
+    // Recalculate level from scratch based on total XP
+    let level = 1;
+    let xpCounter = 0;
+    while (true) {
+        const xpNeeded = level * 100;
+        if (newXP >= xpCounter + xpNeeded) {
+            xpCounter += xpNeeded;
+            level++;
+        } else {
+            break;
+        }
+    }
+
+    const updates = { xp: newXP };
+    if (level > currentLevel) {
+        updates.level = level;
+    }
+
+    const newSettings = { ...userSettings, ...updates };
+    await updateSettings(newSettings);
+    
+    return { newXP, newLevel: level, leveledUp: level > currentLevel };
+  };
+
   const addEntry = async (entryData) => {
     if (!user) return;
     setIsSaving(true);
@@ -82,21 +131,6 @@ export function useLifeSyncData(user) {
     }
   };
 
-  const updateSettings = async (newSettings) => {
-    if (!user) return;
-    setIsSaving(true);
-    try {
-      // Optimistic update
-      setUserSettings(newSettings);
-      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'profile'), newSettings);
-    } catch (err) {
-      console.error("Error saving settings:", err);
-      throw err;
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return {
     entries,
     userSettings,
@@ -104,6 +138,7 @@ export function useLifeSyncData(user) {
     addEntry,
     deleteEntry,
     updateSettings,
-    setUserSettings 
+    setUserSettings,
+    awardXP
   };
 }

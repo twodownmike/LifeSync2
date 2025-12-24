@@ -210,44 +210,31 @@ export default function FocusMode({ onSessionComplete }) {
         
         {/* Timer Display */}
         <div className="relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center flex-shrink-0">
-            {/* Progress Circle */}
-            <svg className="absolute inset-0 w-full h-full -rotate-90">
-                <circle
-                    cx="50%"
-                    cy="50%"
-                    r="46%"
-                    stroke="#27272a" // zinc-800
-                    strokeWidth="4"
-                    fill="transparent"
-                />
-                <circle
-                    cx="50%"
-                    cy="50%"
-                    r="46%"
-                    stroke="#06b6d4" // cyan-500
-                    strokeWidth="8"
-                    fill="transparent"
-                    strokeDasharray={`${2 * Math.PI * 46}%`} // Approximate based on percentage
-                    strokeDashoffset={`${2 * Math.PI * 46 * (1 - progress / 100)}%`} // SVG dashoffset relative to percent
-                    strokeLinecap="round"
-                    className="transition-all duration-1000 ease-linear"
-                    style={{ strokeDasharray: '289%', strokeDashoffset: `${289 * (1 - progress/100)}%` }} // Fallback manual calc if % fails in some browsers, but let's stick to simple px for radius if we want exact scaling.
-                    // Actually, let's revert to px based on container size or use viewBox properly.
-                />
-            </svg>
-            {/* Re-implementing SVG with ViewBox for scaling */}
-            <svg viewBox="0 0 256 256" className="absolute inset-0 w-full h-full -rotate-90">
-                <circle cx="128" cy="128" r="120" stroke="#27272a" strokeWidth="8" fill="transparent" />
+            
+            {/* Ambient Breathing Background (Only when active) */}
+            {isActive && (
+                <>
+                    <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-3xl animate-pulse-slow"></div>
+                    <div className="absolute inset-0 border-4 border-cyan-500/30 rounded-full animate-breathe" style={{ animationDelay: '0s' }}></div>
+                    <div className="absolute inset-4 border-2 border-cyan-500/20 rounded-full animate-breathe" style={{ animationDelay: '1s' }}></div>
+                    <div className="absolute inset-8 border border-cyan-500/10 rounded-full animate-breathe" style={{ animationDelay: '2s' }}></div>
+                </>
+            )}
+
+            {/* Progress Circle (Static track) */}
+            <svg viewBox="0 0 256 256" className="absolute inset-0 w-full h-full -rotate-90 z-10">
+                <circle cx="128" cy="128" r="120" stroke="#27272a" strokeWidth="4" fill="transparent" />
                 <circle 
-                    cx="128" cy="128" r="120" stroke="#06b6d4" strokeWidth="12" fill="transparent"
+                    cx="128" cy="128" r="120" stroke="#06b6d4" strokeWidth="4" fill="transparent"
                     strokeDasharray={2 * Math.PI * 120}
                     strokeDashoffset={2 * Math.PI * 120 * (1 - progress / 100)}
                     strokeLinecap="round"
-                    className="transition-all duration-1000 ease-linear"
+                    className="transition-all duration-1000 ease-linear shadow-[0_0_15px_#06b6d4]"
+                    style={{ filter: 'drop-shadow(0 0 4px #06b6d4)' }}
                 />
             </svg>
 
-            <div className="z-10 text-center flex flex-col items-center">
+            <div className="z-20 text-center flex flex-col items-center">
                 <div className="text-6xl md:text-8xl font-mono font-bold text-white tracking-tighter mb-4 tabular-nums transition-all">
                     {formatTime(timeLeft)}
                 </div>
