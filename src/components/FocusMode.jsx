@@ -195,8 +195,8 @@ export default function FocusMode({ onSessionComplete }) {
   const progress = ((duration * 60 - timeLeft) / (duration * 60)) * 100;
 
   return (
-    <div className="flex flex-col h-full animate-fade-in pb-24 relative">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="flex flex-col h-full animate-fade-in pb-24 relative md:pb-0 md:justify-center">
+      <div className="flex items-center gap-3 mb-6 md:absolute md:top-6 md:left-6">
         <div className="p-2 bg-cyan-500/10 rounded-full text-cyan-400 border border-cyan-500/20">
           <Brain size={24} />
         </div>
@@ -206,27 +206,40 @@ export default function FocusMode({ onSessionComplete }) {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+      <div className="flex-1 flex flex-col md:flex-row items-center justify-center space-y-6 md:space-y-0 md:gap-20 max-w-5xl mx-auto w-full">
         
         {/* Timer Display */}
-        <div className="relative w-64 h-64 flex items-center justify-center">
+        <div className="relative w-64 h-64 md:w-96 md:h-96 flex items-center justify-center flex-shrink-0">
             {/* Progress Circle */}
             <svg className="absolute inset-0 w-full h-full -rotate-90">
                 <circle
-                    cx="128"
-                    cy="128"
-                    r="120"
+                    cx="50%"
+                    cy="50%"
+                    r="46%"
                     stroke="#27272a" // zinc-800
                     strokeWidth="4"
                     fill="transparent"
                 />
                 <circle
-                    cx="128"
-                    cy="128"
-                    r="120"
+                    cx="50%"
+                    cy="50%"
+                    r="46%"
                     stroke="#06b6d4" // cyan-500
                     strokeWidth="8"
                     fill="transparent"
+                    strokeDasharray={`${2 * Math.PI * 46}%`} // Approximate based on percentage
+                    strokeDashoffset={`${2 * Math.PI * 46 * (1 - progress / 100)}%`} // SVG dashoffset relative to percent
+                    strokeLinecap="round"
+                    className="transition-all duration-1000 ease-linear"
+                    style={{ strokeDasharray: '289%', strokeDashoffset: `${289 * (1 - progress/100)}%` }} // Fallback manual calc if % fails in some browsers, but let's stick to simple px for radius if we want exact scaling.
+                    // Actually, let's revert to px based on container size or use viewBox properly.
+                />
+            </svg>
+            {/* Re-implementing SVG with ViewBox for scaling */}
+            <svg viewBox="0 0 256 256" className="absolute inset-0 w-full h-full -rotate-90">
+                <circle cx="128" cy="128" r="120" stroke="#27272a" strokeWidth="8" fill="transparent" />
+                <circle 
+                    cx="128" cy="128" r="120" stroke="#06b6d4" strokeWidth="12" fill="transparent"
                     strokeDasharray={2 * Math.PI * 120}
                     strokeDashoffset={2 * Math.PI * 120 * (1 - progress / 100)}
                     strokeLinecap="round"
@@ -235,59 +248,36 @@ export default function FocusMode({ onSessionComplete }) {
             </svg>
 
             <div className="z-10 text-center flex flex-col items-center">
-                <div className="text-6xl font-mono font-bold text-white tracking-tighter mb-2 tabular-nums">
+                <div className="text-6xl md:text-8xl font-mono font-bold text-white tracking-tighter mb-4 tabular-nums transition-all">
                     {formatTime(timeLeft)}
                 </div>
                 
                 {/* Controls */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                     <button 
                         onClick={toggleTimer}
-                        className={`p-4 rounded-full transition-all active:scale-95 flex items-center justify-center
+                        className={`p-4 md:p-6 rounded-full transition-all active:scale-95 flex items-center justify-center
                             ${isActive 
                                 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' 
                                 : 'bg-cyan-500 text-black hover:bg-cyan-400 shadow-lg shadow-cyan-500/20'}`}
                     >
-                        {isActive ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
+                        {isActive ? <Pause size={28} className="md:w-8 md:h-8" fill="currentColor" /> : <Play size={28} className="md:w-8 md:h-8 ml-1" fill="currentColor" />}
                     </button>
                     
                     <button 
                         onClick={resetTimer}
-                        className="p-3 rounded-full bg-zinc-900 text-zinc-500 hover:text-white hover:bg-zinc-800 border border-zinc-800 transition-all"
+                        className="p-3 md:p-4 rounded-full bg-zinc-900 text-zinc-500 hover:text-white hover:bg-zinc-800 border border-zinc-800 transition-all"
                     >
-                        <RotateCcw size={18} />
+                        <RotateCcw size={18} className="md:w-6 md:h-6" />
                     </button>
                 </div>
             </div>
         </div>
 
-        {/* Task Tag Selection */}
-        {!isActive && (
-          <div className="w-full max-w-sm px-4">
-            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mask-gradient">
-              {TASK_TAGS.map(tag => {
-                const Icon = tag.icon;
-                const isSelected = selectedTag === tag.id;
-                return (
-                  <button
-                    key={tag.id}
-                    onClick={() => setSelectedTag(tag.id)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border transition-all
-                      ${isSelected 
-                        ? 'bg-cyan-500 text-black border-cyan-500' 
-                        : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:border-zinc-700'}`}
-                  >
-                    <Icon size={12} />
-                    {tag.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Task Input */}
-        <div className="w-full max-w-sm px-4">
+        {/* Right Column: Controls & Settings */}
+        <div className="flex flex-col gap-6 w-full max-w-sm px-4 md:px-0">
+            
+            {/* Task Input */}
             <div className="relative group">
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-cyan-400 transition-colors">
                     <Tag size={16} />
@@ -298,39 +288,62 @@ export default function FocusMode({ onSessionComplete }) {
                     value={task}
                     onChange={(e) => setTask(e.target.value)}
                     disabled={isActive}
-                    className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-all text-center"
+                    className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl py-4 pl-10 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-all text-center text-lg font-medium"
                 />
             </div>
-        </div>
 
-        {/* Duration Select */}
-        {!isActive && (
-            <div className="flex gap-2">
-                {DURATIONS.map(d => (
-                    <button
-                        key={d.min}
-                        onClick={() => handleDurationChange(d.min)}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all
-                            ${duration === d.min 
-                                ? 'bg-zinc-800 text-white border-zinc-600' 
-                                : 'bg-transparent text-zinc-500 border-zinc-800 hover:border-zinc-700'}`}
-                    >
-                        {d.label}
-                    </button>
-                ))}
-            </div>
-        )}
+            {/* Task Tag Selection */}
+            {!isActive && (
+              <div className="">
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mask-gradient md:flex-wrap md:justify-center">
+                  {TASK_TAGS.map(tag => {
+                    const Icon = tag.icon;
+                    const isSelected = selectedTag === tag.id;
+                    return (
+                      <button
+                        key={tag.id}
+                        onClick={() => setSelectedTag(tag.id)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border transition-all
+                          ${isSelected 
+                            ? 'bg-cyan-500 text-black border-cyan-500' 
+                            : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:border-zinc-700 hover:text-zinc-300'}`}
+                      >
+                        <Icon size={14} />
+                        {tag.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
-        {/* Audio Controls */}
-        <div className="w-full max-w-sm px-4">
-            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
-                <div className="flex items-center justify-between mb-3">
+            {/* Duration Select */}
+            {!isActive && (
+                <div className="flex gap-2 justify-center">
+                    {DURATIONS.map(d => (
+                        <button
+                            key={d.min}
+                            onClick={() => handleDurationChange(d.min)}
+                            className={`px-6 py-3 rounded-xl text-sm font-bold border transition-all
+                                ${duration === d.min 
+                                    ? 'bg-zinc-800 text-white border-zinc-600 shadow-lg' 
+                                    : 'bg-transparent text-zinc-500 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'}`}
+                        >
+                            {d.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Audio Controls */}
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
                         <Headphones size={14} /> Soundscape
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                     {AUDIO_MODES.map(mode => {
                         const Icon = mode.icon;
                         const isSelected = audioMode === mode.id;
@@ -338,13 +351,13 @@ export default function FocusMode({ onSessionComplete }) {
                             <button
                                 key={mode.id}
                                 onClick={() => setAudioMode(mode.id)}
-                                className={`flex flex-col items-center gap-2 p-2 rounded-xl border transition-all
+                                className={`flex flex-col items-center gap-3 p-3 rounded-xl border transition-all
                                     ${isSelected 
                                         ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' 
-                                        : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}
+                                        : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'}`}
                             >
-                                <Icon size={20} />
-                                <span className="text-[10px] font-medium">{mode.label}</span>
+                                <Icon size={24} />
+                                <span className="text-[10px] font-bold">{mode.label}</span>
                             </button>
                         )
                     })}

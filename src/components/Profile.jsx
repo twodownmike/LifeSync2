@@ -77,7 +77,7 @@ export default function Profile({
           </button>
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
             <div className="text-xs text-zinc-500 mb-1 flex items-center gap-1">
               <Ruler size={12} /> Height
@@ -143,7 +143,7 @@ export default function Profile({
            </div>
        </div>
 
-       <div className="grid grid-cols-1 gap-3">
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {ACHIEVEMENTS.map(achievement => {
              const isUnlocked = unlockedSet.has(achievement.id);
              
@@ -210,7 +210,7 @@ export default function Profile({
 
   const renderStats = () => (
     <div className="space-y-4 animate-slide-up">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
          <Card className="flex flex-col items-center justify-center py-6 gap-2">
             <div className="p-3 rounded-full bg-orange-500/10 text-orange-500 mb-1">
                <Flame size={24} />

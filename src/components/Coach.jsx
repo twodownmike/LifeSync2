@@ -68,28 +68,28 @@ export default function Coach({ user, apiKey, entries, routines, userSettings, f
       )}
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto px-4 space-y-6 pb-40">
+      <div className="flex-1 overflow-y-auto px-4 space-y-6 pb-40 md:pb-28 md:px-0 md:max-w-3xl md:mx-auto md:w-full scrollbar-hide">
          {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-8 opacity-100">
               <div className="space-y-4">
-                 <div className="w-20 h-20 bg-zinc-900/50 rounded-3xl flex items-center justify-center mx-auto border border-zinc-800 shadow-2xl relative">
+                 <div className="w-20 h-20 md:w-24 md:h-24 bg-zinc-900/50 rounded-3xl flex items-center justify-center mx-auto border border-zinc-800 shadow-2xl relative">
                     <div className="absolute inset-0 bg-violet-500/20 blur-xl rounded-full"></div>
-                    <Brain size={40} className="text-violet-400 relative z-10" />
+                    <Brain size={40} className="text-violet-400 relative z-10 md:w-12 md:h-12" />
                  </div>
                  <div>
-                    <h3 className="text-xl font-bold text-white">Ready to Optimize?</h3>
-                    <p className="text-zinc-500 text-sm max-w-xs mx-auto mt-2 leading-relaxed">
+                    <h3 className="text-xl md:text-2xl font-bold text-white">Ready to Optimize?</h3>
+                    <p className="text-zinc-500 text-sm md:text-base max-w-xs md:max-w-md mx-auto mt-2 leading-relaxed">
                       I've analyzed your {fastingData.label.toLowerCase()} state and recent logs.
                     </p>
                  </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+              <div className="grid grid-cols-2 gap-3 w-full max-w-sm md:max-w-lg">
                 {quickActions.map((action, i) => (
                   <button 
                     key={i}
                     onClick={() => sendMessage(action.prompt)}
-                    className="flex flex-col items-center gap-2 p-4 bg-zinc-900/50 border border-zinc-800 hover:border-violet-500/50 hover:bg-zinc-900 rounded-2xl transition-all active:scale-95 group"
+                    className="flex flex-col items-center gap-2 p-4 bg-zinc-900/50 border border-zinc-800 hover:border-violet-500/50 hover:bg-zinc-900 rounded-2xl transition-all active:scale-95 group hover:shadow-lg hover:shadow-violet-500/10"
                   >
                      <action.icon size={20} className="text-zinc-400 group-hover:text-violet-400 transition-colors" />
                      <span className="text-xs font-bold text-zinc-300">{action.label}</span>
@@ -107,15 +107,15 @@ export default function Coach({ user, apiKey, entries, routines, userSettings, f
                    </div>
                  )}
                  
-                 <div className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${
+                 <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-4 shadow-sm ${
                    msg.role === 'user' 
                      ? 'bg-zinc-800 text-white rounded-tr-sm' 
                      : 'bg-zinc-900/80 border border-zinc-800 text-zinc-200 rounded-tl-sm'
                  }`}>
                    {msg.role === 'user' ? (
-                     <p className="text-sm leading-relaxed">{msg.content}</p>
+                     <p className="text-sm leading-relaxed md:text-base">{msg.content}</p>
                    ) : (
-                     <div className="text-sm leading-relaxed prose prose-invert prose-p:my-1 prose-headings:text-violet-200 prose-headings:font-bold prose-headings:text-sm prose-strong:text-violet-300">
+                     <div className="text-sm leading-relaxed prose prose-invert prose-p:my-1 prose-headings:text-violet-200 prose-headings:font-bold prose-headings:text-sm prose-strong:text-violet-300 md:text-base">
                         <MarkdownText text={msg.content} />
                      </div>
                    )}
@@ -151,39 +151,41 @@ export default function Coach({ user, apiKey, entries, routines, userSettings, f
 
       {/* Input Area */}
       <div className="absolute bottom-0 left-0 right-0 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-800 pb-safe transition-all z-20">
-         {/* Suggestions Row */}
-         {messages.length > 0 && !loading && (
-           <div className="flex gap-2 overflow-x-auto px-4 py-3 no-scrollbar mask-linear-fade">
-             {quickActions.map((action, i) => (
-                <button
-                  key={i}
-                  onClick={() => sendMessage(action.prompt)}
-                  className="flex-shrink-0 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-[10px] font-bold text-zinc-400 whitespace-nowrap hover:text-violet-400 hover:border-violet-500/30 hover:bg-violet-500/5 transition-all"
-                >
-                  {action.label}
-                </button>
-             ))}
-           </div>
-         )}
+         <div className="max-w-3xl mx-auto w-full">
+             {/* Suggestions Row */}
+             {messages.length > 0 && !loading && (
+               <div className="flex gap-2 overflow-x-auto px-4 py-3 no-scrollbar mask-linear-fade md:px-0">
+                 {quickActions.map((action, i) => (
+                    <button
+                      key={i}
+                      onClick={() => sendMessage(action.prompt)}
+                      className="flex-shrink-0 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-[10px] font-bold text-zinc-400 whitespace-nowrap hover:text-violet-400 hover:border-violet-500/30 hover:bg-violet-500/5 transition-all cursor-pointer"
+                    >
+                      {action.label}
+                    </button>
+                 ))}
+               </div>
+             )}
 
-         <div className="p-4 pt-0">
-           <div className="flex gap-2 bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 focus-within:border-violet-500/50 focus-within:ring-1 focus-within:ring-violet-500/20 transition-all">
-             <input
-               type="text"
-               value={chatInput}
-               onChange={(e) => setChatInput(e.target.value)}
-               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-               placeholder="Ask your coach..."
-               className="flex-1 bg-transparent px-3 text-sm text-white focus:outline-none placeholder:text-zinc-600"
-             />
-             <button 
-               onClick={handleSend}
-               disabled={loading || !chatInput.trim()}
-               className="w-10 h-10 flex items-center justify-center bg-violet-600 text-white rounded-xl hover:bg-violet-500 disabled:opacity-50 disabled:bg-zinc-800 disabled:text-zinc-600 transition-all shadow-lg shadow-violet-500/20"
-             >
-               <Send size={16} />
-             </button>
-           </div>
+             <div className="p-4 pt-0 md:pb-6">
+               <div className="flex gap-2 bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 focus-within:border-violet-500/50 focus-within:ring-1 focus-within:ring-violet-500/20 transition-all shadow-xl">
+                 <input
+                   type="text"
+                   value={chatInput}
+                   onChange={(e) => setChatInput(e.target.value)}
+                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                   placeholder="Ask your coach..."
+                   className="flex-1 bg-transparent px-3 text-sm text-white focus:outline-none placeholder:text-zinc-600 md:text-base md:py-1"
+                 />
+                 <button 
+                   onClick={handleSend}
+                   disabled={loading || !chatInput.trim()}
+                   className="w-10 h-10 flex items-center justify-center bg-violet-600 text-white rounded-xl hover:bg-violet-500 disabled:opacity-50 disabled:bg-zinc-800 disabled:text-zinc-600 transition-all shadow-lg shadow-violet-500/20"
+                 >
+                   <Send size={16} />
+                 </button>
+               </div>
+             </div>
          </div>
       </div>
     </div>
