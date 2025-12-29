@@ -1,7 +1,7 @@
 import { 
   Star, Sunrise, Clock, Flame, Dumbbell, Crown, Zap, 
   Brain, Book, Calendar, Medal, Trophy, Mountain, Target, 
-  Sword, Shield, Activity, Wind 
+  Sword, Shield, Activity, Wind, Wallet, PiggyBank, TrendingUp
 } from 'lucide-react';
 
 export const calculateStreak = (entries) => {
@@ -83,6 +83,15 @@ export const ACHIEVEMENTS = [
     points: 10,
     check: (entries) => entries.filter(e => e.type === 'journal').length >= 3
   },
+  {
+    id: 'first_dollar',
+    title: 'Financial Start',
+    desc: 'Log your first income or expense.',
+    icon: Wallet,
+    tier: 'bronze',
+    points: 10,
+    check: (entries) => entries.some(e => e.type === 'finance')
+  },
 
   // --- SILVER TIER (Intermediate) ---
   {
@@ -147,6 +156,15 @@ export const ACHIEVEMENTS = [
            return workouts.some(w => new Date(w.timestamp).toDateString() === sunDate.toDateString());
        });
     }
+  },
+  {
+    id: 'budget_tracker',
+    title: 'Money Minded',
+    desc: 'Log 10 financial transactions.',
+    icon: PiggyBank,
+    tier: 'silver',
+    points: 25,
+    check: (entries) => entries.filter(e => e.type === 'finance').length >= 10
   },
 
   // --- GOLD TIER (Advanced) ---

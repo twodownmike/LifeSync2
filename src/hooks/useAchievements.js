@@ -33,8 +33,8 @@ export function useAchievements(entries, userSettings, updateSettings) {
         
         // Use specific check function if available
         if (achievement.check) {
-            // We pass entries and extra context (like maxFastHrs)
-            isUnlocked = achievement.check(entries, maxFastHrs);
+            // We pass entries and extra context (like maxFastHrs, userSettings)
+            isUnlocked = achievement.check(entries, maxFastHrs, userSettings);
         }
 
         if (isUnlocked) {

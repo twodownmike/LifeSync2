@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Utensils, Dumbbell, BookOpen, Clock, 
-  TrendingUp, Home, X, User, Sparkles, Brain, Zap, Minus, Scale
+  TrendingUp, Home, X, User, Sparkles, Brain, Zap, Minus, Scale, Wallet
 } from 'lucide-react';
 import FocusMode from './components/FocusMode';
 import Profile from './components/Profile';
@@ -12,6 +12,7 @@ import Dashboard from './components/Dashboard';
 import Breathwork from './components/Breathwork';
 import TrophyRoom from './components/TrophyRoom';
 import Sidebar from './components/Sidebar';
+import Finance from './components/Finance';
 import { Button } from './components/UI';
 import { useAuth } from './hooks/useAuth';
 import { useLifeSyncData } from './hooks/useLifeSyncData';
@@ -45,6 +46,7 @@ export default function LifeSync() {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false); 
   const [isBreathworkOpen, setIsBreathworkOpen] = useState(false);
   const [isTrophyModalOpen, setIsTrophyModalOpen] = useState(false);
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   
   const [modalType, setModalType] = useState(null); 
   const [note, setNote] = useState('');
@@ -54,6 +56,11 @@ export default function LifeSync() {
   const [tempGoal, setTempGoal] = useState(16); 
   const [mood, setMood] = useState(5);
   const [energy, setEnergy] = useState(5); 
+
+  // Finance State
+  const [amount, setAmount] = useState('');
+  const [isExpense, setIsExpense] = useState(true);
+  const [category, setCategory] = useState('Food');
   
   // Workout Builder
   const [exercises, setExercises] = useState([]); 
@@ -91,6 +98,9 @@ export default function LifeSync() {
     setExName('');
     setExWeight('');
     setExReps('');
+    setAmount('');
+    setIsExpense(true);
+    setCategory('Food');
   };
 
   const handleSaveEntry = async () => {
@@ -100,9 +110,10 @@ export default function LifeSync() {
             modalType === 'meal' ? 'Quick Meal' : 
             modalType === 'workout' ? 'Workout' : 
             modalType === 'weight' ? 'Weight Log' :
+            modalType === 'finance' ? (isExpense ? 'Expense' : 'Income') :
             'Journal Entry'
         ),
-        note: modalType === 'weight' ? '' : note, // Clear note for weight types (we used it for input)
+        note: (modalType === 'weight' || modalType === 'finance') ? '' : note, 
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         timestamp: new Date(entryTime).toISOString(),
         mood,
@@ -118,6 +129,13 @@ export default function LifeSync() {
         entryData.title = `${note} lbs`; // Set title for easy viewing
     }
 
+    if (modalType === 'finance') {
+        entryData.amount = parseFloat(amount);
+        entryData.isExpense = isExpense;
+        entryData.category = category;
+        entryData.title = title || `${isExpense ? 'Spent' : 'Earned'} $${amount}`;
+    }
+
     await addEntry(entryData);
     
     // XP Rewards
@@ -127,9 +145,16 @@ export default function LifeSync() {
         const hours = Math.floor(diffMs / (1000 * 60 * 60));
         if (hours > 0) xpEarned += (hours * 5); // 5 XP per hour of fasting
     }
+    if (modalType === 'finance') xpEarned = 5; // Small XP for finance logging
+
     await awardXP(xpEarned);
 
     closeModal();
+  };
+
+  const handleUpdateBudget = async () => {
+    await updateSettings({ ...userSettings, monthlyBudget: parseFloat(tempGoal) });
+    setIsBudgetModalOpen(false);
   };
 
   const addExerciseToSession = () => {
@@ -232,6 +257,14 @@ export default function LifeSync() {
              />
            )}
            {activeTab === 'focus' && <FocusMode onSessionComplete={handleFocusSessionComplete} />}
+           {activeTab === 'finance' && (
+             <Finance 
+                entries={entries}
+                userSettings={userSettings}
+                onAddEntry={openModal}
+                onOpenBudgetModal={() => { setTempGoal(userSettings.monthlyBudget || 2000); setIsBudgetModalOpen(true); }}
+             />
+           )}
            {activeTab === 'analytics' && (
              <Analytics 
                 entries={entries} 
@@ -305,6 +338,12 @@ export default function LifeSync() {
                       <Scale size={20} />
                    </button>
                 </div>
+                <div className="flex items-center gap-3 animate-slide-up" style={{animationDelay: '200ms'}}>
+                   <span className="text-zinc-200 font-medium text-sm bg-zinc-900 px-2 py-1 rounded-md">Finance</span>
+                   <button onClick={(e) => { e.stopPropagation(); openModal('finance'); }} className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                      <Wallet size={20} />
+                   </button>
+                </div>
                 <button onClick={() => setIsTypeSelectorOpen(false)} className="w-14 h-14 mt-2 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:rotate-90 transition-all">
                    <X size={24} />
                 </button>
@@ -322,6 +361,9 @@ export default function LifeSync() {
            </button>
            <button onClick={() => setActiveTab('focus')} className={`p-3 rounded-2xl transition-all ${activeTab === 'focus' ? 'text-cyan-400 bg-cyan-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
               <Brain size={24} strokeWidth={activeTab === 'focus' ? 2.5 : 2} />
+           </button>
+           <button onClick={() => setActiveTab('finance')} className={`p-3 rounded-2xl transition-all ${activeTab === 'finance' ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              <Wallet size={24} strokeWidth={activeTab === 'finance' ? 2.5 : 2} />
            </button>
            <button onClick={() => setActiveTab('analytics')} className={`p-3 rounded-2xl transition-all ${activeTab === 'analytics' ? 'text-violet-400 bg-violet-500/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
               <TrendingUp size={24} strokeWidth={activeTab === 'analytics' ? 2.5 : 2} />
@@ -376,6 +418,68 @@ export default function LifeSync() {
                               className="w-32 bg-transparent text-4xl font-mono font-bold text-center text-white focus:outline-none border-b-2 border-zinc-800 focus:border-blue-500 placeholder:text-zinc-800"
                             />
                             <span className="text-xl font-bold text-zinc-600 mt-2">lbs</span>
+                         </div>
+                      </div>
+                   )}
+
+                   {/* Finance Input (Only for finance type) */}
+                   {modalType === 'finance' && (
+                      <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800 mb-4 space-y-4">
+                         <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800">
+                            <button 
+                              onClick={() => setIsExpense(true)}
+                              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${isExpense ? 'bg-rose-500 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                            >
+                              Expense
+                            </button>
+                            <button 
+                              onClick={() => setIsExpense(false)}
+                              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${!isExpense ? 'bg-emerald-500 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                            >
+                              Income
+                            </button>
+                         </div>
+
+                         <div className="flex items-center gap-3 justify-center">
+                            <span className="text-2xl font-bold text-zinc-500">$</span>
+                            <input 
+                              type="number" 
+                              autoFocus
+                              placeholder="0.00" 
+                              value={amount} 
+                              onChange={(e) => setAmount(e.target.value)}
+                              className="w-40 bg-transparent text-4xl font-mono font-bold text-center text-white focus:outline-none border-b-2 border-zinc-800 focus:border-emerald-500 placeholder:text-zinc-800"
+                            />
+                         </div>
+
+                         <div>
+                            <label className="text-xs text-zinc-500 font-bold uppercase mb-2 block">Category</label>
+                            <select 
+                              value={category}
+                              onChange={(e) => setCategory(e.target.value)}
+                              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 text-sm"
+                            >
+                              {isExpense ? (
+                                <>
+                                  <option value="Food">Food & Dining</option>
+                                  <option value="Transport">Transportation</option>
+                                  <option value="Shopping">Shopping</option>
+                                  <option value="Housing">Housing</option>
+                                  <option value="Utilities">Utilities</option>
+                                  <option value="Health">Health</option>
+                                  <option value="Entertainment">Entertainment</option>
+                                  <option value="Other">Other</option>
+                                </>
+                              ) : (
+                                <>
+                                  <option value="Salary">Salary</option>
+                                  <option value="Freelance">Freelance</option>
+                                  <option value="Investment">Investment</option>
+                                  <option value="Gift">Gift</option>
+                                  <option value="Other">Other</option>
+                                </>
+                              )}
+                            </select>
                          </div>
                       </div>
                    )}
@@ -492,6 +596,30 @@ export default function LifeSync() {
                    </Button>
                 </div>
              </div>
+          </div>
+        )}
+
+        {/* Budget Modal */}
+        {isBudgetModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-zinc-900 w-full max-w-xs rounded-3xl border border-zinc-800 p-6 animate-slide-up shadow-2xl">
+               <h3 className="text-lg font-bold text-white mb-6 text-center">Monthly Budget</h3>
+               
+               <div className="flex items-center justify-center gap-2 mb-8">
+                  <span className="text-2xl font-bold text-zinc-500">$</span>
+                  <input 
+                    type="number"
+                    value={tempGoal}
+                    onChange={(e) => setTempGoal(e.target.value)}
+                    className="w-32 bg-transparent text-4xl font-mono font-bold text-center text-white focus:outline-none border-b-2 border-zinc-800 focus:border-emerald-500"
+                  />
+               </div>
+
+               <div className="grid grid-cols-2 gap-3">
+                  <Button variant="ghost" onClick={() => setIsBudgetModalOpen(false)} className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400">Cancel</Button>
+                  <Button onClick={handleUpdateBudget} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save'}</Button>
+               </div>
+            </div>
           </div>
         )}
 

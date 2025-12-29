@@ -1,11 +1,12 @@
 import React from 'react';
-import { Home, Clock, Brain, TrendingUp, Sparkles, LogOut, Settings } from 'lucide-react';
+import { Home, Clock, Brain, TrendingUp, Sparkles, LogOut, Settings, Wallet } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab, onSignOut, userPhoto, userName }) {
   const menuItems = [
     { id: 'home', label: 'Dashboard', icon: Home },
     { id: 'fasting', label: 'Fasting', icon: Clock },
     { id: 'focus', label: 'Focus Mode', icon: Brain },
+    { id: 'finance', label: 'Finance', icon: Wallet },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'coach', label: 'AI Coach', icon: Sparkles },
   ];
