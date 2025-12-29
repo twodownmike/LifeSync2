@@ -20,6 +20,8 @@ import { useFasting } from './hooks/useFasting';
 import { useAchievements } from './hooks/useAchievements';
 import { useFastingNotifications } from './hooks/useFastingNotifications';
 import { useRecurringFinance } from './hooks/useRecurringFinance';
+import { scanReceipt } from './utils/receiptScanner';
+import { Camera, Loader2 } from 'lucide-react';
 
 export default function LifeSync() {
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
@@ -64,6 +66,7 @@ export default function LifeSync() {
   const [amount, setAmount] = useState('');
   const [isExpense, setIsExpense] = useState(true);
   const [category, setCategory] = useState('Food');
+  const [isScanning, setIsScanning] = useState(false);
   
   // Workout Builder
   const [exercises, setExercises] = useState([]); 
@@ -166,6 +169,41 @@ export default function LifeSync() {
     setExWeight('');
     setExReps('');
     setExName(''); 
+  };
+
+  const handleReceiptUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!apiKey) {
+        alert("Please add your OpenAI API Key in Settings to use Receipt Scanning.");
+        return;
+    }
+
+    setIsScanning(true);
+    try {
+        const data = await scanReceipt(file, apiKey);
+        
+        if (data.total_amount) setAmount(data.total_amount.toString());
+        if (data.merchant_name) setTitle(data.merchant_name);
+        if (data.category) setCategory(data.category);
+        if (data.date) {
+            // Try to set time to now but date to receipt date
+            const receiptDate = new Date(data.date);
+            const now = new Date();
+            receiptDate.setHours(now.getHours(), now.getMinutes());
+            // Adjust for timezone offset for input value
+            receiptDate.setMinutes(receiptDate.getMinutes() - receiptDate.getTimezoneOffset());
+            setEntryTime(receiptDate.toISOString().slice(0, 16));
+        }
+        
+        setIsExpense(true); // Receipts are usually expenses
+    } catch (error) {
+        console.error("Scanning failed", error);
+        alert("Could not scan receipt. Please try again or enter manually.");
+    } finally {
+        setIsScanning(false);
+    }
   };
 
   const handleBreathworkComplete = async (minutes, patternName) => {
@@ -431,7 +469,7 @@ export default function LifeSync() {
                    {/* Finance Input (Only for finance type) */}
                    {modalType === 'finance' && (
                       <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800 mb-4 space-y-4">
-                         <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800">
+                         <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800 relative">
                             <button 
                               onClick={() => setIsExpense(true)}
                               className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${isExpense ? 'bg-rose-500 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
@@ -445,6 +483,16 @@ export default function LifeSync() {
                               Income
                             </button>
                          </div>
+                         
+                         {isExpense && (
+                            <div className="flex justify-center">
+                                <label className={`flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-700 bg-zinc-900 text-xs font-bold text-zinc-400 hover:text-white hover:border-zinc-600 transition-all cursor-pointer ${isScanning ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    {isScanning ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                                    {isScanning ? 'Scanning...' : 'Scan Receipt'}
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleReceiptUpload} />
+                                </label>
+                            </div>
+                         )}
 
                          <div className="flex items-center gap-3 justify-center">
                             <span className="text-2xl font-bold text-zinc-500">$</span>
