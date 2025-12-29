@@ -67,6 +67,7 @@ export default function LifeSync() {
   const [isExpense, setIsExpense] = useState(true);
   const [category, setCategory] = useState('Food');
   const [isScanning, setIsScanning] = useState(false);
+  const [includeMoodEnergy, setIncludeMoodEnergy] = useState(true);
   
   // Workout Builder
   const [exercises, setExercises] = useState([]); 
@@ -107,6 +108,7 @@ export default function LifeSync() {
     setAmount('');
     setIsExpense(true);
     setCategory('Food');
+    setIncludeMoodEnergy(true);
   };
 
   const handleSaveEntry = async () => {
@@ -122,10 +124,13 @@ export default function LifeSync() {
         ),
         note: (modalType === 'weight' || modalType === 'finance' || modalType === 'fast_start') ? '' : note, 
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
-        timestamp: new Date(entryTime).toISOString(),
-        mood,
-        energy
+        timestamp: new Date(entryTime).toISOString()
     };
+
+    if (includeMoodEnergy && modalType !== 'finance' && modalType !== 'fast_start') {
+        entryData.mood = mood;
+        entryData.energy = energy;
+    }
 
     if (modalType === 'workout') {
         entryData.exercises = exercises;
@@ -619,37 +624,51 @@ export default function LifeSync() {
                    {/* Mood/Energy Sliders (Hidden for Finance & Fast Start) */}
                    {modalType !== 'finance' && modalType !== 'fast_start' && (
                      <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800 space-y-4">
-                        <div>
-                           <div className="flex justify-between text-xs font-bold uppercase mb-2">
-                              <span className="text-zinc-500">Mood</span>
-                              <span className="text-violet-400">{mood}/10</span>
-                           </div>
-                           <input 
-                              type="range" min="1" max="10" step="1"
-                              value={mood} onChange={(e) => setMood(parseInt(e.target.value))}
-                              className="w-full accent-violet-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                           />
-                           <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
-                              <span>Awful</span>
-                              <span>Excellent</span>
-                           </div>
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs text-zinc-500 font-bold uppercase">Track Mood & Energy</label>
+                            <button 
+                                onClick={() => setIncludeMoodEnergy(!includeMoodEnergy)}
+                                className={`w-10 h-6 rounded-full p-1 transition-colors ${includeMoodEnergy ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                            >
+                                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${includeMoodEnergy ? 'translate-x-4' : ''}`} />
+                            </button>
                         </div>
 
-                        <div>
-                           <div className="flex justify-between text-xs font-bold uppercase mb-2">
-                              <span className="text-zinc-500">Energy</span>
-                              <span className="text-yellow-500">{energy}/10</span>
-                           </div>
-                           <input 
-                              type="range" min="1" max="10" step="1"
-                              value={energy} onChange={(e) => setEnergy(parseInt(e.target.value))}
-                              className="w-full accent-yellow-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                           />
-                           <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
-                              <span>Drained</span>
-                              <span>Energized</span>
-                           </div>
-                        </div>
+                        {includeMoodEnergy && (
+                            <>
+                                <div>
+                                   <div className="flex justify-between text-xs font-bold uppercase mb-2">
+                                      <span className="text-zinc-500">Mood</span>
+                                      <span className="text-violet-400">{mood}/10</span>
+                                   </div>
+                                   <input 
+                                      type="range" min="1" max="10" step="1"
+                                      value={mood} onChange={(e) => setMood(parseInt(e.target.value))}
+                                      className="w-full accent-violet-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                   />
+                                   <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
+                                      <span>Awful</span>
+                                      <span>Excellent</span>
+                                   </div>
+                                </div>
+
+                                <div>
+                                   <div className="flex justify-between text-xs font-bold uppercase mb-2">
+                                      <span className="text-zinc-500">Energy</span>
+                                      <span className="text-yellow-500">{energy}/10</span>
+                                   </div>
+                                   <input 
+                                      type="range" min="1" max="10" step="1"
+                                      value={energy} onChange={(e) => setEnergy(parseInt(e.target.value))}
+                                      className="w-full accent-yellow-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                   />
+                                   <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
+                                      <span>Drained</span>
+                                      <span>Energized</span>
+                                   </div>
+                                </div>
+                            </>
+                        )}
                      </div>
                    )}
 
