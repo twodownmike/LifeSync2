@@ -19,6 +19,7 @@ import { useLifeSyncData } from './hooks/useLifeSyncData';
 import { useFasting } from './hooks/useFasting';
 import { useAchievements } from './hooks/useAchievements';
 import { useFastingNotifications } from './hooks/useFastingNotifications';
+import { useRecurringFinance } from './hooks/useRecurringFinance';
 
 export default function LifeSync() {
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
@@ -26,6 +27,8 @@ export default function LifeSync() {
     entries, userSettings, isSaving, 
     addEntry, deleteEntry, updateSettings, setUserSettings, awardXP 
   } = useLifeSyncData(user);
+  
+  const { recurringItems, addRecurringItem, deleteRecurringItem } = useRecurringFinance(user, addEntry);
   
   const { fastingData, bioPhase, lastMeal } = useFasting(entries, userSettings);
   
@@ -261,8 +264,11 @@ export default function LifeSync() {
              <Finance 
                 entries={entries}
                 userSettings={userSettings}
+                recurringItems={recurringItems}
                 onAddEntry={openModal}
                 onOpenBudgetModal={() => { setTempGoal(userSettings.monthlyBudget || 2000); setIsBudgetModalOpen(true); }}
+                onAddRecurring={addRecurringItem}
+                onDeleteRecurring={deleteRecurringItem}
              />
            )}
            {activeTab === 'analytics' && (
@@ -523,40 +529,42 @@ export default function LifeSync() {
                      </div>
                    )}
 
-                   {/* Mood/Energy Sliders */}
-                   <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800 space-y-4">
-                      <div>
-                         <div className="flex justify-between text-xs font-bold uppercase mb-2">
-                            <span className="text-zinc-500">Mood</span>
-                            <span className="text-violet-400">{mood}/10</span>
-                         </div>
-                         <input 
-                            type="range" min="1" max="10" step="1"
-                            value={mood} onChange={(e) => setMood(parseInt(e.target.value))}
-                            className="w-full accent-violet-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                         />
-                         <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
-                            <span>Awful</span>
-                            <span>Excellent</span>
-                         </div>
-                      </div>
+                   {/* Mood/Energy Sliders (Hidden for Finance) */}
+                   {modalType !== 'finance' && (
+                     <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800 space-y-4">
+                        <div>
+                           <div className="flex justify-between text-xs font-bold uppercase mb-2">
+                              <span className="text-zinc-500">Mood</span>
+                              <span className="text-violet-400">{mood}/10</span>
+                           </div>
+                           <input 
+                              type="range" min="1" max="10" step="1"
+                              value={mood} onChange={(e) => setMood(parseInt(e.target.value))}
+                              className="w-full accent-violet-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                           />
+                           <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
+                              <span>Awful</span>
+                              <span>Excellent</span>
+                           </div>
+                        </div>
 
-                      <div>
-                         <div className="flex justify-between text-xs font-bold uppercase mb-2">
-                            <span className="text-zinc-500">Energy</span>
-                            <span className="text-yellow-500">{energy}/10</span>
-                         </div>
-                         <input 
-                            type="range" min="1" max="10" step="1"
-                            value={energy} onChange={(e) => setEnergy(parseInt(e.target.value))}
-                            className="w-full accent-yellow-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                         />
-                         <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
-                            <span>Drained</span>
-                            <span>Energized</span>
-                         </div>
-                      </div>
-                   </div>
+                        <div>
+                           <div className="flex justify-between text-xs font-bold uppercase mb-2">
+                              <span className="text-zinc-500">Energy</span>
+                              <span className="text-yellow-500">{energy}/10</span>
+                           </div>
+                           <input 
+                              type="range" min="1" max="10" step="1"
+                              value={energy} onChange={(e) => setEnergy(parseInt(e.target.value))}
+                              className="w-full accent-yellow-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                           />
+                           <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
+                              <span>Drained</span>
+                              <span>Energized</span>
+                           </div>
+                        </div>
+                     </div>
+                   )}
 
                    <div>
                       <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Notes</label>

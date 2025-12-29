@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, PieChart, ArrowUpRight, ArrowDownRight, Target, Plus } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Wallet, PieChart, ArrowUpRight, ArrowDownRight, Target, Plus, Repeat, Trash2, Calendar } from 'lucide-react';
 import { Card, Button } from './UI';
 import { FinanceChart } from './AnalyticsCharts';
 
-export default function Finance({ entries, userSettings, onAddEntry, onOpenBudgetModal }) {
-  const [view, setView] = useState('overview'); // 'overview' | 'transactions'
+export default function Finance({ entries, userSettings, recurringItems, onAddEntry, onOpenBudgetModal, onAddRecurring, onDeleteRecurring }) {
+  const [view, setView] = useState('overview'); // 'overview' | 'recurring'
 
   // Filter Finance Entries
   const financeEntries = useMemo(() => {
@@ -67,6 +67,28 @@ export default function Finance({ entries, userSettings, onAddEntry, onOpenBudge
   const budgetProgress = Math.min((metrics.monthExpense / budget) * 100, 100);
   const isOverBudget = metrics.monthExpense > budget;
 
+  // New Recurring State
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const [recTitle, setRecTitle] = useState('');
+  const [recAmount, setRecAmount] = useState('');
+  const [recType, setRecType] = useState('expense'); // 'expense' | 'income'
+  const [recFreq, setRecFreq] = useState('monthly');
+  const [recDate, setRecDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const handleAddRecurring = () => {
+      onAddRecurring({
+          title: recTitle,
+          amount: parseFloat(recAmount),
+          isExpense: recType === 'expense',
+          category: 'Recurring', // Default for now
+          frequency: recFreq,
+          nextDueDate: recDate
+      });
+      setIsRecurringModalOpen(false);
+      setRecTitle('');
+      setRecAmount('');
+  };
+
   return (
     <div className="space-y-6 pb-24 md:pb-8 animate-fade-in">
       {/* Header */}
@@ -78,151 +100,282 @@ export default function Finance({ entries, userSettings, onAddEntry, onOpenBudge
           </h2>
           <p className="text-zinc-500 text-xs">Track your wealth flow</p>
         </div>
-        <Button onClick={() => onAddEntry('finance')} variant="primary" className="h-10 px-4 text-sm">
-          <Plus size={16} /> Add Transaction
-        </Button>
+        <div className="flex gap-2">
+            <button 
+                onClick={() => setView(view === 'overview' ? 'recurring' : 'overview')}
+                className={`h-10 px-4 text-sm font-bold rounded-xl transition-all border ${view === 'recurring' ? 'bg-violet-500/10 border-violet-500 text-violet-400' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'}`}
+            >
+                {view === 'overview' ? 'Manage Recurring' : 'Back to Overview'}
+            </button>
+            <Button onClick={() => onAddEntry('finance')} variant="primary" className="h-10 px-4 text-sm">
+                <Plus size={16} /> <span className="hidden sm:inline">Add Transaction</span>
+            </Button>
+        </div>
       </div>
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Total Balance */}
-        <Card className="bg-zinc-900 border-zinc-800 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none"></div>
-          <div className="relative z-10">
-            <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1">Total Balance</div>
-            <div className={`text-3xl font-mono font-bold ${metrics.totalBalance >= 0 ? 'text-white' : 'text-red-400'}`}>
-              ${metrics.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div className="mt-2 flex items-center gap-1 text-xs text-zinc-500">
-               <Wallet size={12} />
-               <span>Across all logs</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Monthly Income */}
-        <Card className="bg-zinc-900 border-zinc-800">
-          <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1">This Month In</div>
-          <div className="text-2xl font-mono font-bold text-emerald-400 flex items-center gap-2">
-            <ArrowUpRight size={20} />
-            ${metrics.monthIncome.toLocaleString()}
-          </div>
-        </Card>
-
-        {/* Monthly Expense */}
-        <Card className="bg-zinc-900 border-zinc-800">
-          <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1">This Month Out</div>
-          <div className="text-2xl font-mono font-bold text-rose-400 flex items-center gap-2">
-            <ArrowDownRight size={20} />
-            ${metrics.monthExpense.toLocaleString()}
-          </div>
-        </Card>
-      </div>
-
-      {/* Budget Card */}
-      <Card className="relative overflow-hidden">
-        <div className="flex justify-between items-end mb-2">
-          <div>
-            <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
-              <Target size={14} /> Monthly Budget
-            </div>
-            <div className="text-xl font-bold text-white">
-              ${metrics.monthExpense.toLocaleString()} <span className="text-zinc-500 text-sm">/ ${budget.toLocaleString()}</span>
-            </div>
-          </div>
-          <button onClick={onOpenBudgetModal} className="text-xs text-emerald-500 hover:text-emerald-400 underline">
-            Edit Goal
-          </button>
-        </div>
-        
-        <div className="h-3 w-full bg-zinc-800 rounded-full overflow-hidden">
-          <div 
-            className={`h-full rounded-full transition-all duration-1000 ${isOverBudget ? 'bg-rose-500' : 'bg-emerald-500'}`}
-            style={{ width: `${budgetProgress}%` }}
-          />
-        </div>
-        <div className="mt-2 text-xs text-zinc-500 text-right">
-          {isOverBudget ? (
-            <span className="text-rose-400 font-bold">Over Budget by ${(metrics.monthExpense - budget).toLocaleString()}</span>
-          ) : (
-            <span>${(budget - metrics.monthExpense).toLocaleString()} remaining</span>
-          )}
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart */}
-        <Card>
-           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-              <TrendingUp size={18} className="text-zinc-400" />
-              30 Day Trend
-           </h3>
-           <FinanceChart data={chartData} />
-        </Card>
-
-        {/* Categories */}
-        <Card>
-           <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-              <PieChart size={18} className="text-zinc-400" />
-              Spending Breakdown
-           </h3>
-           <div className="space-y-3">
-             {Object.entries(metrics.spendingByCategory)
-               .sort(([,a], [,b]) => b - a)
-               .slice(0, 6)
-               .map(([cat, amount], i) => {
-                 const pct = (amount / metrics.monthExpense) * 100;
-                 return (
-                   <div key={i} className="flex items-center gap-3">
-                     <div className="w-24 text-xs text-zinc-400 truncate text-right font-medium">{cat}</div>
-                     <div className="flex-1 h-2 bg-zinc-900 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-emerald-500/50 rounded-full"
-                          style={{ width: `${pct}%` }}
-                        ></div>
-                     </div>
-                     <div className="w-16 text-xs text-zinc-300 font-mono text-right">${amount.toLocaleString()}</div>
-                   </div>
-                 );
-               })}
-             {Object.keys(metrics.spendingByCategory).length === 0 && (
-               <div className="text-center text-zinc-600 text-xs py-8">No expenses logged yet</div>
-             )}
-           </div>
-        </Card>
-      </div>
-
-      {/* Recent Transactions List */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-bold text-white px-1">Recent Transactions</h3>
-        <div className="space-y-2">
-          {financeEntries.slice(0, 10).map(entry => (
-            <div key={entry.id} className="bg-zinc-900/50 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between hover:bg-zinc-900 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${entry.isExpense ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                  {entry.isExpense ? <ArrowDownRight size={20} /> : <ArrowUpRight size={20} />}
+      {view === 'overview' ? (
+          <>
+            {/* Main Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Total Balance */}
+                <Card className="bg-zinc-900 border-zinc-800 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none"></div>
+                <div className="relative z-10">
+                    <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1">Total Balance</div>
+                    <div className={`text-3xl font-mono font-bold ${metrics.totalBalance >= 0 ? 'text-white' : 'text-red-400'}`}>
+                    ${metrics.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="mt-2 flex items-center gap-1 text-xs text-zinc-500">
+                    <Wallet size={12} />
+                    <span>Across all logs</span>
+                    </div>
                 </div>
+                </Card>
+
+                {/* Monthly Income */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1">This Month In</div>
+                <div className="text-2xl font-mono font-bold text-emerald-400 flex items-center gap-2">
+                    <ArrowUpRight size={20} />
+                    ${metrics.monthIncome.toLocaleString()}
+                </div>
+                </Card>
+
+                {/* Monthly Expense */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1">This Month Out</div>
+                <div className="text-2xl font-mono font-bold text-rose-400 flex items-center gap-2">
+                    <ArrowDownRight size={20} />
+                    ${metrics.monthExpense.toLocaleString()}
+                </div>
+                </Card>
+            </div>
+
+            {/* Budget Card */}
+            <Card className="relative overflow-hidden">
+                <div className="flex justify-between items-end mb-2">
                 <div>
-                  <div className="font-bold text-zinc-200">{entry.title}</div>
-                  <div className="text-xs text-zinc-500 flex items-center gap-2">
-                    <span className="capitalize bg-zinc-800 px-1.5 py-0.5 rounded text-[10px]">{entry.category}</span>
-                    <span>•</span>
-                    <span>{new Date(entry.timestamp).toLocaleDateString()}</span>
-                  </div>
+                    <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
+                    <Target size={14} /> Monthly Budget
+                    </div>
+                    <div className="text-xl font-bold text-white">
+                    ${metrics.monthExpense.toLocaleString()} <span className="text-zinc-500 text-sm">/ ${budget.toLocaleString()}</span>
+                    </div>
                 </div>
-              </div>
-              <div className={`font-mono font-bold ${entry.isExpense ? 'text-zinc-200' : 'text-emerald-400'}`}>
-                {entry.isExpense ? '-' : '+'}${parseFloat(entry.amount).toFixed(2)}
-              </div>
+                <button onClick={onOpenBudgetModal} className="text-xs text-emerald-500 hover:text-emerald-400 underline">
+                    Edit Goal
+                </button>
+                </div>
+                
+                <div className="h-3 w-full bg-zinc-800 rounded-full overflow-hidden">
+                <div 
+                    className={`h-full rounded-full transition-all duration-1000 ${isOverBudget ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${budgetProgress}%` }}
+                />
+                </div>
+                <div className="mt-2 text-xs text-zinc-500 text-right">
+                {isOverBudget ? (
+                    <span className="text-rose-400 font-bold">Over Budget by ${(metrics.monthExpense - budget).toLocaleString()}</span>
+                ) : (
+                    <span>${(budget - metrics.monthExpense).toLocaleString()} remaining</span>
+                )}
+                </div>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Chart */}
+                <Card>
+                <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                    <TrendingUp size={18} className="text-zinc-400" />
+                    30 Day Trend
+                </h3>
+                <FinanceChart data={chartData} />
+                </Card>
+
+                {/* Categories */}
+                <Card>
+                <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                    <PieChart size={18} className="text-zinc-400" />
+                    Spending Breakdown
+                </h3>
+                <div className="space-y-3">
+                    {Object.entries(metrics.spendingByCategory)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 6)
+                    .map(([cat, amount], i) => {
+                        const pct = (amount / metrics.monthExpense) * 100;
+                        return (
+                        <div key={i} className="flex items-center gap-3">
+                            <div className="w-24 text-xs text-zinc-400 truncate text-right font-medium">{cat}</div>
+                            <div className="flex-1 h-2 bg-zinc-900 rounded-full overflow-hidden">
+                                <div 
+                                className="h-full bg-emerald-500/50 rounded-full"
+                                style={{ width: `${pct}%` }}
+                                ></div>
+                            </div>
+                            <div className="w-16 text-xs text-zinc-300 font-mono text-right">${amount.toLocaleString()}</div>
+                        </div>
+                        );
+                    })}
+                    {Object.keys(metrics.spendingByCategory).length === 0 && (
+                    <div className="text-center text-zinc-600 text-xs py-8">No expenses logged yet</div>
+                    )}
+                </div>
+                </Card>
             </div>
-          ))}
-          {financeEntries.length === 0 && (
-            <div className="text-center text-zinc-500 py-12 bg-zinc-900/30 rounded-xl border border-dashed border-zinc-800">
-               No transactions yet. Start logging!
+
+            {/* Recent Transactions List */}
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-white px-1">Recent Transactions</h3>
+                <div className="space-y-2">
+                {financeEntries.slice(0, 10).map(entry => (
+                    <div key={entry.id} className="bg-zinc-900/50 border border-zinc-800/50 p-4 rounded-xl flex items-center justify-between hover:bg-zinc-900 transition-colors">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${entry.isExpense ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                        {entry.isExpense ? <ArrowDownRight size={20} /> : <ArrowUpRight size={20} />}
+                        </div>
+                        <div>
+                        <div className="font-bold text-zinc-200">{entry.title}</div>
+                        <div className="text-xs text-zinc-500 flex items-center gap-2">
+                            <span className="capitalize bg-zinc-800 px-1.5 py-0.5 rounded text-[10px]">{entry.category}</span>
+                            <span>•</span>
+                            <span>{new Date(entry.timestamp).toLocaleDateString()}</span>
+                        </div>
+                        </div>
+                    </div>
+                    <div className={`font-mono font-bold ${entry.isExpense ? 'text-zinc-200' : 'text-emerald-400'}`}>
+                        {entry.isExpense ? '-' : '+'}${parseFloat(entry.amount).toFixed(2)}
+                    </div>
+                    </div>
+                ))}
+                {financeEntries.length === 0 && (
+                    <div className="text-center text-zinc-500 py-12 bg-zinc-900/30 rounded-xl border border-dashed border-zinc-800">
+                    No transactions yet. Start logging!
+                    </div>
+                )}
+                </div>
             </div>
-          )}
-        </div>
-      </div>
+          </>
+      ) : (
+          /* RECURRING VIEW */
+          <div className="animate-slide-up space-y-6">
+              <div className="flex justify-between items-center">
+                  <div>
+                      <h3 className="text-lg font-bold text-white">Recurring Items</h3>
+                      <p className="text-xs text-zinc-500">Subscriptions, Salary, Rent</p>
+                  </div>
+                  <Button onClick={() => setIsRecurringModalOpen(true)}>
+                      <Plus size={16} /> Add New
+                  </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {recurringItems && recurringItems.map(item => (
+                      <Card key={item.id} className="bg-zinc-900 border-zinc-800 flex justify-between items-center group">
+                          <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                  <div className={`w-2 h-2 rounded-full ${item.isExpense ? 'bg-rose-500' : 'bg-emerald-500'}`}></div>
+                                  <span className="font-bold text-white">{item.title}</span>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-zinc-500">
+                                  <span className="flex items-center gap-1"><Repeat size={12} /> {item.frequency}</span>
+                                  <span className="flex items-center gap-1"><Calendar size={12} /> Next: {item.nextDueDate}</span>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                              <span className={`font-mono font-bold ${item.isExpense ? 'text-zinc-300' : 'text-emerald-400'}`}>
+                                  ${parseFloat(item.amount).toFixed(2)}
+                              </span>
+                              <button 
+                                onClick={() => onDeleteRecurring(item.id)}
+                                className="p-2 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                              >
+                                  <Trash2 size={16} />
+                              </button>
+                          </div>
+                      </Card>
+                  ))}
+                  {(!recurringItems || recurringItems.length === 0) && (
+                      <div className="col-span-full py-12 text-center text-zinc-600 border border-dashed border-zinc-800 rounded-2xl">
+                          No recurring items found.
+                      </div>
+                  )}
+              </div>
+
+              {/* Recurring Modal */}
+              {isRecurringModalOpen && (
+                  <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                      <div className="bg-zinc-900 w-full max-w-sm p-6 rounded-2xl border border-zinc-800 shadow-2xl animate-scale-in">
+                          <h3 className="text-lg font-bold text-white mb-4">Add Recurring Item</h3>
+                          
+                          <div className="space-y-4">
+                              <div>
+                                  <label className="text-xs font-bold text-zinc-500 uppercase">Title</label>
+                                  <input 
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white"
+                                    placeholder="e.g. Netflix, Salary"
+                                    value={recTitle}
+                                    onChange={e => setRecTitle(e.target.value)}
+                                  />
+                              </div>
+                              <div className="flex gap-4">
+                                  <div className="flex-1">
+                                    <label className="text-xs font-bold text-zinc-500 uppercase">Amount</label>
+                                    <input 
+                                        type="number"
+                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white"
+                                        placeholder="0.00"
+                                        value={recAmount}
+                                        onChange={e => setRecAmount(e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <label className="text-xs font-bold text-zinc-500 uppercase">Type</label>
+                                    <select 
+                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white"
+                                        value={recType}
+                                        onChange={e => setRecType(e.target.value)}
+                                    >
+                                        <option value="expense">Expense</option>
+                                        <option value="income">Income</option>
+                                    </select>
+                                  </div>
+                              </div>
+                              <div className="flex gap-4">
+                                  <div className="flex-1">
+                                    <label className="text-xs font-bold text-zinc-500 uppercase">Frequency</label>
+                                    <select 
+                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white"
+                                        value={recFreq}
+                                        onChange={e => setRecFreq(e.target.value)}
+                                    >
+                                        <option value="weekly">Weekly</option>
+                                        <option value="biweekly">Bi-Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                        <option value="yearly">Yearly</option>
+                                    </select>
+                                  </div>
+                                  <div className="flex-1">
+                                    <label className="text-xs font-bold text-zinc-500 uppercase">Next Due</label>
+                                    <input 
+                                        type="date"
+                                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-white"
+                                        value={recDate}
+                                        onChange={e => setRecDate(e.target.value)}
+                                    />
+                                  </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 pt-2">
+                                  <Button variant="ghost" onClick={() => setIsRecurringModalOpen(false)}>Cancel</Button>
+                                  <Button onClick={handleAddRecurring}>Add Item</Button>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
+          </div>
+      )}
     </div>
   );
 }
