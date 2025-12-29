@@ -155,6 +155,16 @@ export default function LifeSync() {
 
     await awardXP(xpEarned);
 
+    // If logging a meal, automatically end the current fast if active
+    if (modalType === 'meal' && fastingData.isFasting) {
+        await addEntry({
+            type: 'fast_end',
+            title: 'Fast Ended (Meal)',
+            timestamp: entryData.timestamp, // Match meal time
+            tags: ['fasting', 'auto_end']
+        });
+    }
+
     closeModal();
   };
 
@@ -238,6 +248,33 @@ export default function LifeSync() {
     await awardXP(10 + durationMinutes);
   };
 
+  const handleToggleFast = async () => {
+    // If currently fasting, we are ending it (which usually leads to logging a meal, but user might just want to stop timer)
+    // However, the button logic in FastingTimer distinguishes:
+    // If fasting -> "End Fast (Log Meal)" -> onLogMeal
+    // If NOT fasting -> "Start Fast" -> onToggleFast
+    
+    // So if this is called, it means we are STARTING a fast.
+    if (!fastingData.isFasting) {
+        await addEntry({
+            type: 'fast_start',
+            title: 'Fast Started',
+            timestamp: new Date().toISOString(),
+            tags: ['fasting']
+        });
+    } else {
+        // Fallback if called while fasting (just in case), though UI handles this via onLogMeal usually.
+        // But let's support a manual "Stop without logging meal" if needed, 
+        // though typically ending a fast means eating.
+        await addEntry({
+            type: 'fast_end',
+            title: 'Fast Ended',
+            timestamp: new Date().toISOString(),
+            tags: ['fasting']
+        });
+    }
+  };
+
   const handleUpdateGoal = async () => {
     await updateSettings({ ...userSettings, fastingGoal: tempGoal });
     setIsGoalModalOpen(false);
@@ -295,6 +332,7 @@ export default function LifeSync() {
                 onOpenGoalModal={() => { setTempGoal(userSettings.fastingGoal); setIsGoalModalOpen(true); }}
                 onOpenInfoModal={() => setIsInfoModalOpen(true)}
                 onLogMeal={() => openModal('meal')}
+                onToggleFast={handleToggleFast}
              />
            )}
            {activeTab === 'focus' && <FocusMode onSessionComplete={handleFocusSessionComplete} />}

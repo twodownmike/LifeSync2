@@ -12,12 +12,25 @@ export function useFasting(entries, userSettings) {
     return entries.find(e => e.type === 'meal');
   }, [entries]);
 
+  const fastingStatus = useMemo(() => {
+    // Find the latest start or end event
+    const latestEvent = entries.find(e => e.type === 'fast_start' || e.type === 'fast_end');
+    
+    // If no events, or latest was an end, we are NOT fasting
+    if (!latestEvent || latestEvent.type === 'fast_end') {
+        return { isFasting: false, startTime: null };
+    }
+    
+    // Otherwise we are fasting
+    return { isFasting: true, startTime: new Date(latestEvent.timestamp) };
+  }, [entries]);
+
   const fastingData = useMemo(() => {
-    if (!lastMeal) return { hours: 0, minutes: 0, seconds: 0, progress: 0, label: "Start your first fast" };
+    if (!fastingStatus.isFasting) {
+        return { hours: 0, minutes: 0, seconds: 0, progress: 0, label: "Ready to Fast", isFasting: false };
+    }
       
-    const lastMealDate = new Date(lastMeal.timestamp);
-    const diffMs = currentTime - lastMealDate;
-    // Protect against future dates causing negative
+    const diffMs = currentTime - fastingStatus.startTime;
     const safeDiffMs = Math.max(0, diffMs); 
 
     const diffHrs = Math.floor(safeDiffMs / (1000 * 60 * 60));
@@ -32,8 +45,8 @@ export function useFasting(entries, userSettings) {
     else if (diffHrs < 12) label = "Normal State";
     else if (diffHrs > 18) label = "Autophagy";
 
-    return { hours: diffHrs, minutes: diffMins, seconds: diffSecs, progress, label };
-  }, [lastMeal, currentTime, userSettings.fastingGoal]);
+    return { hours: diffHrs, minutes: diffMins, seconds: diffSecs, progress, label, isFasting: true };
+  }, [fastingStatus, currentTime, userSettings.fastingGoal]);
 
   const bioPhase = useMemo(() => {
     const hour = currentTime.getHours();

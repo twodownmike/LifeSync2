@@ -1,8 +1,8 @@
 import React from 'react';
-import { Info, Edit2, ChevronRight, Activity, Utensils } from 'lucide-react';
+import { Info, Edit2, ChevronRight, Activity, Utensils, Play, Square } from 'lucide-react';
 import { Card, Button } from './UI';
 
-export default function FastingTimer({ fastingData, userSettings, lastMeal, onOpenGoalModal, onOpenInfoModal, onLogMeal }) {
+export default function FastingTimer({ fastingData, userSettings, lastMeal, onOpenGoalModal, onOpenInfoModal, onLogMeal, onToggleFast }) {
   const radius = 120;
   const circumference = 2 * Math.PI * radius;
   
@@ -125,23 +125,25 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
               {/* Colored Phase Segments (Background) */}
               {renderPhaseSegments()}
               
-              {/* Active Progress Ring */}
-              <circle
-                cx="128"
-                cy="128"
-                r={radius}
-                stroke="url(#progressGradient)"
-                strokeWidth="12"
-                fill="transparent"
-                className="transition-all duration-1000 ease-out" 
-                strokeDasharray={circumference}
-                strokeDashoffset={offset}
-                strokeLinecap="round"
-                style={{ filter: 'url(#glow)' }}
-              />
+              {/* Active Progress Ring (Only show if fasting) */}
+              {fastingData.isFasting && (
+                  <circle
+                    cx="128"
+                    cy="128"
+                    r={radius}
+                    stroke="url(#progressGradient)"
+                    strokeWidth="12"
+                    fill="transparent"
+                    className="transition-all duration-1000 ease-out" 
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    style={{ filter: 'url(#glow)' }}
+                  />
+              )}
               
               {/* Current Position Marker (Dot) */}
-              {progressPct > 0 && (
+              {fastingData.isFasting && progressPct > 0 && (
                  <circle 
                     cx="128" cy="8" r="6" fill="#fff"
                     className="transition-all duration-1000 ease-out origin-center"
@@ -152,81 +154,111 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
             
             {/* Center Content */}
             <div className="text-center z-10 flex flex-col items-center absolute inset-0 justify-center">
-              <div className={`text-[10px] font-bold uppercase tracking-widest mb-2 px-2 py-0.5 rounded-full ${isOvertime ? 'bg-amber-500/20 text-amber-400' : 'text-zinc-500'}`}>
-                 {isOvertime ? 'Goal Reached' : 'Elapsed Time'}
-              </div>
-              
-              <div className="text-6xl font-bold text-white font-mono tracking-tighter flex items-baseline filter drop-shadow-lg">
-                <span>{fastingData.hours}</span>
-                <span className="mx-1 opacity-50 text-4xl">:</span>
-                <span>{fastingData.minutes.toString().padStart(2, '0')}</span>
-              </div>
-              
-              <div className="text-xl font-mono text-zinc-500 mt-1 font-medium">
-                 {fastingData.seconds.toString().padStart(2, '0')}
-              </div>
-              
-              <div className={`mt-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-zinc-900 border-zinc-800`}>
-                 <span className={`w-2 h-2 rounded-full ${currentPhase?.bg}`}></span>
-                 <span className={currentPhase?.text}>{currentPhase?.label || fastingData.label}</span>
-              </div>
+              {fastingData.isFasting ? (
+                  <>
+                      <div className={`text-[10px] font-bold uppercase tracking-widest mb-2 px-2 py-0.5 rounded-full ${isOvertime ? 'bg-amber-500/20 text-amber-400' : 'text-zinc-500'}`}>
+                        {isOvertime ? 'Goal Reached' : 'Elapsed Time'}
+                      </div>
+                      
+                      <div className="text-6xl font-bold text-white font-mono tracking-tighter flex items-baseline filter drop-shadow-lg">
+                        <span>{fastingData.hours}</span>
+                        <span className="mx-1 opacity-50 text-4xl">:</span>
+                        <span>{fastingData.minutes.toString().padStart(2, '0')}</span>
+                      </div>
+                      
+                      <div className="text-xl font-mono text-zinc-500 mt-1 font-medium">
+                        {fastingData.seconds.toString().padStart(2, '0')}
+                      </div>
+                      
+                      <div className={`mt-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-zinc-900 border-zinc-800`}>
+                        <span className={`w-2 h-2 rounded-full ${currentPhase?.bg}`}></span>
+                        <span className={currentPhase?.text}>{currentPhase?.label || fastingData.label}</span>
+                      </div>
+                  </>
+              ) : (
+                  <>
+                    <div className="w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center mb-4 text-zinc-600 animate-pulse">
+                        <Utensils size={32} />
+                    </div>
+                    <div className="text-xl font-bold text-zinc-300">Ready to Fast?</div>
+                    <div className="text-xs text-zinc-500 mt-1 max-w-[150px]">Start when you finish your last meal</div>
+                  </>
+              )}
             </div>
           </div>
 
           {/* Info Cards Container */}
           <div className="w-full max-w-sm px-6 space-y-4 md:px-0">
             
-            {/* End Fast Button */}
-            <Button onClick={onLogMeal} className="w-full bg-zinc-100 text-zinc-950 hover:bg-white hover:scale-[1.02] shadow-xl shadow-white/5" icon={Utensils}>
-               End Fast (Log Meal)
-            </Button>
+            {/* Start/Stop Button */}
+            {fastingData.isFasting ? (
+                <Button onClick={onLogMeal} className="w-full bg-rose-500/10 text-rose-500 border border-rose-500/50 hover:bg-rose-500 hover:text-white hover:scale-[1.02] shadow-xl shadow-rose-900/10" icon={Square}>
+                    End Fast
+                </Button>
+            ) : (
+                <Button onClick={onToggleFast} className="w-full bg-emerald-500 text-zinc-950 hover:bg-emerald-400 hover:scale-[1.02] shadow-xl shadow-emerald-500/20" icon={Play}>
+                    Start Fast
+                </Button>
+            )}
 
-            {/* Metric Bars */}
-            <div className="grid grid-cols-3 gap-2">
-               {[
-                 { label: 'Insulin', val: metrics.insulin, color: 'bg-blue-500' },
-                 { label: 'Ketones', val: metrics.ketones, color: 'bg-emerald-500' },
-                 { label: 'Autophagy', val: metrics.autophagy, color: 'bg-violet-500' }
-               ].map(m => (
-                  <div key={m.label} className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-xl flex flex-col gap-2">
-                     <div className="text-[10px] text-zinc-500 font-bold uppercase">{m.label}</div>
-                     <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                        <div 
-                            className={`h-full rounded-full transition-all duration-1000 ${m.color}`} 
-                            style={{ width: `${m.val}%` }}
-                        />
-                     </div>
-                  </div>
-               ))}
-            </div>
+            {/* Metric Bars (Only show if fasting) */}
+            {fastingData.isFasting && (
+                <div className="grid grid-cols-3 gap-2 animate-slide-up">
+                {[
+                    { label: 'Insulin', val: metrics.insulin, color: 'bg-blue-500' },
+                    { label: 'Ketones', val: metrics.ketones, color: 'bg-emerald-500' },
+                    { label: 'Autophagy', val: metrics.autophagy, color: 'bg-violet-500' }
+                ].map(m => (
+                    <div key={m.label} className="bg-zinc-900/50 border border-zinc-800 p-2 rounded-xl flex flex-col gap-2">
+                        <div className="text-[10px] text-zinc-500 font-bold uppercase">{m.label}</div>
+                        <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                            <div 
+                                className={`h-full rounded-full transition-all duration-1000 ${m.color}`} 
+                                style={{ width: `${m.val}%` }}
+                            />
+                        </div>
+                    </div>
+                ))}
+                </div>
+            )}
 
             {/* Current State Detail */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 relative overflow-hidden group">
-               <div className={`absolute top-0 left-0 w-1 h-full ${currentPhase?.bg} transition-colors duration-500`}></div>
-               
-               <div className="flex justify-between items-start mb-2">
-                   <div className="flex items-center gap-2">
-                      <Activity size={16} className={currentPhase?.text} />
-                      <h3 className="font-bold text-zinc-200 text-sm">Body Status</h3>
-                   </div>
-                   {isOvertime && (
-                       <span className="text-[10px] font-bold bg-amber-500/10 text-amber-500 px-2 py-1 rounded border border-amber-500/20">
-                          Zone+
-                       </span>
-                   )}
-               </div>
-               
-               <p className="text-sm text-zinc-400 leading-relaxed">
-                 {currentPhase?.id === 'digest' && "Insulin is elevated. Your body is absorbing nutrients from your last meal."}
-                 {currentPhase?.id === 'normal' && "Blood sugar stabilizes. You are starting to access stored energy."}
-                 {currentPhase?.id === 'burn' && "Fat burning mode engaged. Ketone production increases significantly."}
-                 {currentPhase?.id === 'auto' && "Deep cellular cleaning (autophagy). Old cells are being recycled."}
-               </p>
+               {fastingData.isFasting ? (
+                   <>
+                       <div className={`absolute top-0 left-0 w-1 h-full ${currentPhase?.bg} transition-colors duration-500`}></div>
+                       
+                       <div className="flex justify-between items-start mb-2">
+                           <div className="flex items-center gap-2">
+                              <Activity size={16} className={currentPhase?.text} />
+                              <h3 className="font-bold text-zinc-200 text-sm">Body Status</h3>
+                           </div>
+                           {isOvertime && (
+                               <span className="text-[10px] font-bold bg-amber-500/10 text-amber-500 px-2 py-1 rounded border border-amber-500/20">
+                                  Zone+
+                               </span>
+                           )}
+                       </div>
+                       
+                       <p className="text-sm text-zinc-400 leading-relaxed">
+                         {currentPhase?.id === 'digest' && "Insulin is elevated. Your body is absorbing nutrients from your last meal."}
+                         {currentPhase?.id === 'normal' && "Blood sugar stabilizes. You are starting to access stored energy."}
+                         {currentPhase?.id === 'burn' && "Fat burning mode engaged. Ketone production increases significantly."}
+                         {currentPhase?.id === 'auto' && "Deep cellular cleaning (autophagy). Old cells are being recycled."}
+                       </p>
 
-               {nextPhase && (
-                   <div className="mt-4 pt-3 border-t border-zinc-800/50 flex items-center justify-between">
-                      <span className="text-xs text-zinc-500">Next: <span className="text-white font-medium">{nextPhase.label}</span></span>
-                      <span className="text-xs font-mono text-zinc-400">in {nextPhase.hoursToNext}h {nextPhase.minsToNext}m</span>
+                       {nextPhase && (
+                           <div className="mt-4 pt-3 border-t border-zinc-800/50 flex items-center justify-between">
+                              <span className="text-xs text-zinc-500">Next: <span className="text-white font-medium">{nextPhase.label}</span></span>
+                              <span className="text-xs font-mono text-zinc-400">in {nextPhase.hoursToNext}h {nextPhase.minsToNext}m</span>
+                           </div>
+                       )}
+                   </>
+               ) : (
+                   <div className="text-center py-4">
+                       <p className="text-sm text-zinc-400">
+                           Fasting helps your body repair and burn fat. Start a timer when you're done eating for the day.
+                       </p>
                    </div>
                )}
             </div>
@@ -236,7 +268,7 @@ export default function FastingTimer({ fastingData, userSettings, lastMeal, onOp
                 <Card className="py-3 px-4 flex flex-col items-center text-center">
                   <div className="text-zinc-500 text-[10px] font-bold uppercase mb-1">Started</div>
                   <div className="text-white font-mono text-sm">
-                    {lastMeal ? new Date(lastMeal.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                    {fastingData.isFasting ? fastingData.startTime?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                   </div>
                 </Card>
                 
