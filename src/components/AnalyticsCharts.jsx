@@ -146,6 +146,59 @@ export const ActivityBarChart = ({ data }) => {
    );
 };
 
+/**
+ * A responsive Line Chart for Finance Trends
+ * @param {Array} data - Array of { label: string, income: number, expense: number, date: string }
+ */
+export const FinanceChart = ({ data }) => {
+  if (!data || data.length === 0) return <div className="h-40 flex items-center justify-center text-zinc-600 text-xs">No Data</div>;
+
+  const maxVal = Math.max(...data.map(d => Math.max(d.income, d.expense)), 100);
+
+  return (
+    <div className="w-full h-48 lg:h-64 select-none">
+       <div className="w-full h-full flex flex-col justify-end gap-2 pb-6">
+          <div className="flex-1 flex items-end justify-between gap-1 px-1">
+             {data.map((d, i) => {
+                const incomePct = (d.income / maxVal) * 100;
+                const expensePct = (d.expense / maxVal) * 100;
+                
+                return (
+                   <div key={i} className="flex-1 flex flex-col justify-end h-full group relative gap-0.5">
+                      {/* Tooltip */}
+                      <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-zinc-900 border border-zinc-800 text-[10px] p-2 rounded z-10 whitespace-nowrap shadow-xl pointer-events-none transition-opacity">
+                         <div className="text-zinc-400 font-bold mb-1">{d.date}</div>
+                         <div className="text-emerald-400">In: ${d.income}</div>
+                         <div className="text-rose-400">Out: ${d.expense}</div>
+                      </div>
+
+                      {/* Bars */}
+                      <div className="w-full flex gap-0.5 items-end h-full">
+                          <div 
+                            className="flex-1 bg-emerald-500/50 hover:bg-emerald-500 rounded-t-sm transition-all" 
+                            style={{ height: `${Math.max(incomePct, 1)}%` }} 
+                          />
+                          <div 
+                            className="flex-1 bg-rose-500/50 hover:bg-rose-500 rounded-t-sm transition-all" 
+                            style={{ height: `${Math.max(expensePct, 1)}%` }} 
+                          />
+                      </div>
+                   </div>
+                );
+             })}
+          </div>
+          
+          {/* Labels */}
+          <div className="flex justify-between px-2 text-[10px] text-zinc-500 font-mono uppercase border-t border-zinc-800 pt-2">
+             {data.map((d, i) => (
+                <div key={i} className={`flex-1 text-center truncate ${i % 5 !== 0 ? 'hidden md:block' : ''}`}>{d.label}</div>
+             ))}
+          </div>
+       </div>
+    </div>
+  );
+};
+
 export const StatCard = ({ icon: Icon, label, value, subtext, color = "text-emerald-500" }) => (
    <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-1">
       <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
