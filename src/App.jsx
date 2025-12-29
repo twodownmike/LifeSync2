@@ -117,9 +117,10 @@ export default function LifeSync() {
             modalType === 'workout' ? 'Workout' : 
             modalType === 'weight' ? 'Weight Log' :
             modalType === 'finance' ? (isExpense ? 'Expense' : 'Income') :
+            modalType === 'fast_start' ? 'Fast Started' :
             'Journal Entry'
         ),
-        note: (modalType === 'weight' || modalType === 'finance') ? '' : note, 
+        note: (modalType === 'weight' || modalType === 'finance' || modalType === 'fast_start') ? '' : note, 
         tags: tags.split(',').map(t => t.trim()).filter(t => t),
         timestamp: new Date(entryTime).toISOString(),
         mood,
@@ -142,6 +143,12 @@ export default function LifeSync() {
         entryData.title = title || `${isExpense ? 'Spent' : 'Earned'} $${amount}`;
     }
 
+    if (modalType === 'fast_start') {
+        entryData.tags = ['fasting'];
+        // If we are backdating, maybe we shouldn't award XP immediately or logic differs?
+        // For now treat same.
+    }
+
     await addEntry(entryData);
     
     // XP Rewards
@@ -152,6 +159,7 @@ export default function LifeSync() {
         if (hours > 0) xpEarned += (hours * 5); // 5 XP per hour of fasting
     }
     if (modalType === 'finance') xpEarned = 5; // Small XP for finance logging
+    if (modalType === 'fast_start') xpEarned = 5;
 
     await awardXP(xpEarned);
 
@@ -249,23 +257,12 @@ export default function LifeSync() {
   };
 
   const handleToggleFast = async () => {
-    // If currently fasting, we are ending it (which usually leads to logging a meal, but user might just want to stop timer)
-    // However, the button logic in FastingTimer distinguishes:
-    // If fasting -> "End Fast (Log Meal)" -> onLogMeal
-    // If NOT fasting -> "Start Fast" -> onToggleFast
-    
-    // So if this is called, it means we are STARTING a fast.
+    // If NOT fasting -> Open Modal to Start Fast (allows setting custom time)
     if (!fastingData.isFasting) {
-        await addEntry({
-            type: 'fast_start',
-            title: 'Fast Started',
-            timestamp: new Date().toISOString(),
-            tags: ['fasting']
-        });
+        openModal('fast_start');
     } else {
-        // Fallback if called while fasting (just in case), though UI handles this via onLogMeal usually.
-        // But let's support a manual "Stop without logging meal" if needed, 
-        // though typically ending a fast means eating.
+        // If fasting -> End Fast Immediately
+        // (User can also log a meal to end it, but this is the manual stop button)
         await addEntry({
             type: 'fast_end',
             title: 'Fast Ended',
@@ -466,7 +463,8 @@ export default function LifeSync() {
                       {modalType === 'meal' && <Utensils className="text-orange-500" />}
                       {modalType === 'workout' && <Dumbbell className="text-emerald-500" />}
                       {modalType === 'journal' && <BookOpen className="text-violet-500" />}
-                      New {modalType === 'meal' ? 'Meal' : modalType === 'workout' ? 'Workout' : 'Entry'}
+                      {modalType === 'fast_start' && <Clock className="text-emerald-500" />}
+                      New {modalType === 'meal' ? 'Meal' : modalType === 'workout' ? 'Workout' : modalType === 'fast_start' ? 'Fast' : 'Entry'}
                    </h2>
                    <button onClick={closeModal} className="p-2 bg-zinc-800 rounded-full text-zinc-400 hover:text-white">
                       <X size={20} />
@@ -474,17 +472,20 @@ export default function LifeSync() {
                 </div>
                 
                 <div className="space-y-4">
-                   <div>
-                      <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Title</label>
-                      <input 
-                        type="text" 
-                        placeholder={modalType === 'meal' ? "e.g. Steak & Eggs" : modalType === 'workout' ? "e.g. Upper Body Power" : "Title"}
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
-                        autoFocus
-                      />
-                   </div>
+                   {/* Title Input (Hide for fast start as it has default) */}
+                   {modalType !== 'fast_start' && (
+                       <div>
+                          <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Title</label>
+                          <input 
+                            type="text" 
+                            placeholder={modalType === 'meal' ? "e.g. Steak & Eggs" : modalType === 'workout' ? "e.g. Upper Body Power" : "Title"}
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
+                            autoFocus
+                          />
+                       </div>
+                   )}
 
                    {/* Weight Input (Only for weight type) */}
                    {modalType === 'weight' && (
@@ -615,8 +616,8 @@ export default function LifeSync() {
                      </div>
                    )}
 
-                   {/* Mood/Energy Sliders (Hidden for Finance) */}
-                   {modalType !== 'finance' && (
+                   {/* Mood/Energy Sliders (Hidden for Finance & Fast Start) */}
+                   {modalType !== 'finance' && modalType !== 'fast_start' && (
                      <div className="bg-zinc-950/50 rounded-xl p-4 border border-zinc-800 space-y-4">
                         <div>
                            <div className="flex justify-between text-xs font-bold uppercase mb-2">
@@ -652,20 +653,22 @@ export default function LifeSync() {
                      </div>
                    )}
 
-                   <div>
-                      <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Notes</label>
-                      <textarea 
-                        rows="3"
-                        placeholder="Add details..."
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 resize-none"
-                      />
-                   </div>
+                   {modalType !== 'fast_start' && (
+                       <div>
+                          <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Notes</label>
+                          <textarea 
+                            rows="3"
+                            placeholder="Add details..."
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 resize-none"
+                          />
+                       </div>
+                   )}
 
                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Time</label>
+                      <div className={modalType === 'fast_start' ? 'col-span-2' : ''}>
+                        <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">{modalType === 'fast_start' ? 'Start Time' : 'Time'}</label>
                         <input 
                           type="datetime-local" 
                           value={entryTime}
@@ -673,16 +676,18 @@ export default function LifeSync() {
                           className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500"
                         />
                       </div>
-                      <div>
-                        <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Tags</label>
-                        <input 
-                          type="text" 
-                          placeholder="comma, separated"
-                          value={tags}
-                          onChange={(e) => setTags(e.target.value)}
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500"
-                        />
-                      </div>
+                      {modalType !== 'fast_start' && (
+                          <div>
+                            <label className="text-xs text-zinc-500 font-bold uppercase ml-1 mb-1 block">Tags</label>
+                            <input 
+                              type="text" 
+                              placeholder="comma, separated"
+                              value={tags}
+                              onChange={(e) => setTags(e.target.value)}
+                              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                      )}
                    </div>
 
                    <Button onClick={handleSaveEntry} disabled={isSaving} className="w-full mt-4">
